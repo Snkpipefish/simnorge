@@ -81,6 +81,8 @@ Første LLM-kjøring for en ny (spørsmål × geografi) tar ~1 min; deretter cac
   gjør motoren marginalt svakere (LLM-svarene er allerede implisitt
   deltakelsesvektede — eksplisitt vekting dobbelteller utdanningsgradienten).
   Den er derfor av som standard i motoren (`turnout_weighting=False` gir
-  identisk oppførsel som før; flagget finnes for eksperimenter).
+  identisk oppførsel som før; flagget finnes for eksperimenter). I den
+  økologiske modellen er den eksakt MAE-nøytral (fitten absorberer den), men
+  brukes fordi stereotypene da beskriver velgere, ikke bosatte.
 - **Små kommuner** gir < 24 demografiske celler → bredere usikkerhet i
   spørretaben.

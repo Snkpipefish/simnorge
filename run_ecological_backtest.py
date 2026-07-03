@@ -52,6 +52,9 @@ def main() -> None:
     candidates = [k for k in all_codes if k in fit_panel.kommunes and k in test_panel.kommunes]
 
     # Deltakelsesvekting fra BYGGEÅRET (13360). None -> uniform (logget).
+    # MÅLT (2021→2025, n=355): eksakt nøytral for MAE (5.01/9.24 begge veier) —
+    # fitten absorberer omvektingen. Beholdes fordi δ-stereotypene da leses som
+    # VELGERE (ikke bosatte), som er det ligningen faktisk beskriver.
     from calibration.turnout import load_turnout
     turnout = load_turnout(ssb, build)
 
