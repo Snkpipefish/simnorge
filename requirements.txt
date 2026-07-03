@@ -1,0 +1,16 @@
+# SimNorge — core dependencies
+# Pinned loosely; exact resolved versions are reproducible via the venv.
+
+# Modul 1 — datalag
+requests>=2.31
+pandas>=2.2
+pyarrow>=15          # parquet diskcache
+
+# Modul 2/4 — populasjon + klynging (IPF, KMeans)
+scikit-learn>=1.4
+
+# Modul 5 — spørremotor
+anthropic>=0.40
+
+# Modul 8 — visning (kommune-choropleth)
+plotly>=5.20

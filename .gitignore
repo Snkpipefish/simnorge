@@ -1,0 +1,14 @@
+# Cache of raw SSB data (reproducible — refetched on demand)
+.cache/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+*.swp

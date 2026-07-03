@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimNorge — spør befolkningen</title>
+<style>
+  :root { --bg:#f6f4ef; --card:#ffffff; --ink:#1d232a; --mut:#6b7280;
+          --acc:#1f6feb; --warn:#92400e; --warnbg:#fef3c7; --ok:#065f46; --okbg:#d1fae5;
+          --flat:#7c2d12; --flatbg:#ffedd5; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;
+         background:var(--bg); color:var(--ink); }
+  main { max-width:880px; margin:0 auto; padding:28px 18px 60px; }
+  h1 { font-size:26px; margin:6px 0 2px; }
+  .sub { color:var(--mut); margin:0 0 22px; font-size:14px; }
+  .card { background:var(--card); border:1px solid #e5e1d8; border-radius:12px;
+          padding:18px 20px; margin-bottom:16px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+  input[type=text] { flex:1 1 380px; padding:11px 13px; font-size:16px;
+          border:1px solid #cfcabf; border-radius:8px; }
+  select { flex:0 1 240px; padding:11px 10px; font-size:15px;
+          border:1px solid #cfcabf; border-radius:8px; background:#fff; }
+  button { padding:11px 22px; font-size:16px; border:0; border-radius:8px;
+          background:var(--acc); color:#fff; cursor:pointer; }
+  button:disabled { background:#9db8e8; cursor:wait; }
+  .hint { font-size:13px; color:var(--mut); margin-top:8px; }
+  .banner { border-radius:8px; padding:10px 14px; font-size:14px; margin:10px 0; }
+  .banner.validert { background:var(--okbg); color:var(--ok); }
+  .banner.flat, .banner.delvis, .banner.uvalidert { background:var(--flatbg); color:var(--flat); }
+  .banner.alltid { background:var(--warnbg); color:var(--warn); }
+  .big { font-size:42px; font-weight:700; }
+  .big small { font-size:16px; color:var(--mut); font-weight:400; }
+  .meta { font-size:13px; color:var(--mut); }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  td, th { text-align:left; padding:4px 10px 4px 0; }
+  .bar { height:22px; background:var(--acc); border-radius:4px; min-width:2px; }
+  .binrow { display:flex; align-items:center; gap:10px; margin:4px 0; }
+  .binlab { width:52px; font-size:13px; color:var(--mut); text-align:right; }
+  .binpct { font-size:13px; width:120px; color:var(--mut); }
+  .cols { display:flex; gap:26px; flex-wrap:wrap; }
+  .cols > div { flex:1 1 180px; }
+  h3 { font-size:15px; margin:14px 0 6px; }
+  #err { color:#b91c1c; font-size:14px; margin-top:10px; white-space:pre-wrap; }
+  .spinner { display:inline-block; width:16px; height:16px; border:3px solid #cfe0ff;
+             border-top-color:var(--acc); border-radius:50%; animation:sp 0.8s linear infinite;
+             vertical-align:-3px; margin-right:8px; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<main>
+  <h1>SimNorge — spør befolkningen</h1>
+  <p class="sub">En syntetisk tvilling av Norges befolkning, bygget fra åpen SSB-data.
+     Svarene er <strong>ekstrapolert</strong>, ikke målt — og appen sier alltid hvor godt
+     ekstrapoleringen er validert for akkurat ditt spørsmål.</p>
+
+  <div class="card">
+    <div class="row">
+      <input id="q" type="text" placeholder="F.eks.: Hvor mye stoler du på politikerne?"
+             list="forslag">
+      <datalist id="forslag">
+        <option value="Hvor mye stoler du på politikerne?"></option>
+        <option value="Hvor mye stoler du på politiet?"></option>
+        <option value="Hvor optimistisk er du for fremtiden din?"></option>
+        <option value="Opplever du at det du driver med i livet er meningsfylt?"></option>
+      </datalist>
+      <select id="geo"><option value="0">Hele Norge</option></select>
+      <button id="ask">Spør</button>
+    </div>
+    <div class="hint">Første kjøring av et nytt spørsmål gjør ~24 LLM-kall (~1 min).
+      Alt caches — gjentak er momentane.</div>
+    <div id="err"></div>
+  </div>
+
+  <div class="card" id="kart_card" style="display:none">
+    <h3 style="margin-top:2px">Kommunekart (batch-kjørte spørsmål)</h3>
+    <div class="meta">Kart lages med <code>run_national_map.py</code> — én batch-jobb
+      per spørsmål, cellene deles med spørringene over.</div>
+    <ul id="kart_list" style="margin:8px 0 2px; padding-left:20px"></ul>
+  </div>
+
+  <div id="out" style="display:none">
+    <div class="card">
+      <div id="banner_geo" class="banner"></div>
+      <div class="banner alltid" id="banner_alltid"></div>
+      <div class="cols">
+        <div>
+          <div class="meta" id="scale_lab"></div>
+          <div class="big" id="mean"></div>
+          <div class="meta" id="std"></div>
+          <div class="meta" id="repr"></div>
+        </div>
+        <div style="flex:2 1 320px">
+          <h3>Fordeling på skalaen (med 90 %-bånd)</h3>
+          <div id="bins"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="cols">
+        <div><h3>Per disposisjonsnivå</h3><table id="t_level"></table></div>
+        <div><h3>Per aldersgruppe</h3><table id="t_age"></table></div>
+        <div><h3>Per kjønn</h3><table id="t_sex"></table></div>
+      </div>
+      <h3>Slik ble spørsmålet tolket</h3>
+      <div class="meta" id="tolk"></div>
+      <div class="meta" id="dekning"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+
+async function loadKommuner() {
+  try {
+    const r = await fetch('/api/kommuner');
+    for (const k of await r.json()) {
+      const o = document.createElement('option');
+      o.value = k.kode; o.textContent = `${k.navn} (${k.kode})`;
+      $('geo').appendChild(o);
+    }
+  } catch (e) { $('err').textContent = 'Klarte ikke hente kommuneliste: ' + e; }
+}
+
+function rows(tbl, obj, order) {
+  tbl.innerHTML = '';
+  const keys = order || Object.keys(obj);
+  for (const k of keys) {
+    if (!(k in obj)) continue;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${k}</td><td><strong>${obj[k].toFixed(2)}</strong></td>`;
+    tbl.appendChild(tr);
+  }
+}
+
+function render(d) {
+  $('out').style.display = 'block';
+  const g = d.aerlighet.geo_validitet;
+  const bg = $('banner_geo');
+  bg.className = 'banner ' + g;
+  bg.textContent = (g === 'validert' ? '✔ ' : '⚠ ') + d.aerlighet.geo_validitet_tekst;
+  $('banner_alltid').textContent = '⚠ ' + d.aerlighet.ekstrapolert +
+    (d.aerlighet.dekningstap ? '  ' + d.aerlighet.dekningstap : '');
+  $('scale_lab').textContent =
+    `${d.geografi.navn} — skala 0 («${d.tolkning.skala.lav}») til 10 («${d.tolkning.skala.hoy}»)`;
+  $('mean').innerHTML = d.resultat.snitt.toFixed(2) + ' <small>av 10</small>';
+  $('std').textContent = `spredning (vektet std): ± ${d.resultat.spredning.toFixed(2)}`;
+  $('repr').textContent =
+    `representerer ~${d.resultat.representerer_personer.toLocaleString('no')} personer (16+)`;
+  const bins = $('bins'); bins.innerHTML = '';
+  for (const [lab, v] of Object.entries(d.resultat.fordeling)) {
+    const row = document.createElement('div'); row.className = 'binrow';
+    row.innerHTML = `<div class="binlab">${lab}</div>
+      <div class="bar" style="width:${Math.round(v.andel*420)}px"></div>
+      <div class="binpct">${(v.andel*100).toFixed(1)} % (${(v.lo*100).toFixed(0)}–${(v.hi*100).toFixed(0)})</div>`;
+    bins.appendChild(row);
+  }
+  rows($('t_level'), d.resultat.per_nivaa, ['lav','middels','hoy']);
+  rows($('t_age'), d.resultat.per_alder, ['16-24','25-44','45-66','67+']);
+  rows($('t_sex'), d.resultat.per_kjonn);
+  $('tolk').textContent =
+    `Nærmeste SSB-akse: ${d.tolkning.akse} (${d.tolkning.begrunnelse}). ` +
+    d.aerlighet.prior_akse;
+  $('dekning').textContent =
+    `Dekning: ${d.dekning.unike_prompter} prompter, ${d.dekning.nye_kall} nye LLM-kall, ` +
+    `${d.dekning.feilede} feilede.`;
+}
+
+$('ask').onclick = async () => {
+  const q = $('q').value.trim();
+  if (!q) { $('err').textContent = 'Skriv et spørsmål først.'; return; }
+  $('err').textContent = ''; $('out').style.display = 'none';
+  const b = $('ask'); b.disabled = true;
+  b.innerHTML = '<span class="spinner"></span>Poller …';
+  try {
+    const r = await fetch('/api/ask', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sporsmal: q, geografi: $('geo').value}),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.feil || r.statusText);
+    render(d);
+  } catch (e) { $('err').textContent = String(e.message || e); }
+  b.disabled = false; b.textContent = 'Spør';
+};
+$('q').addEventListener('keydown', e => { if (e.key === 'Enter') $('ask').click(); });
+
+async function loadKart() {
+  try {
+    const r = await fetch('/api/kart');
+    const maps = await r.json();
+    if (!maps.length) return;
+    $('kart_card').style.display = 'block';
+    const ul = $('kart_list'); ul.innerHTML = '';
+    for (const m of maps) {
+      const li = document.createElement('li');
+      const tag = m.geo_validitet === 'validert' ? '✔ geo validert' : '⚠ geo ' + m.geo_validitet;
+      li.innerHTML = `<a href="/kart/${m.slug}.html" target="_blank">${m.sporsmal}</a>
+        <span class="meta">— ${tag}, kommunespenn ${m.kommunespenn} poeng` +
+        (m.feilede_celler ? `, ${m.feilede_celler} celler mangler` : '') + `</span>`;
+      ul.appendChild(li);
+    }
+  } catch (e) { /* kart er valgfritt */ }
+}
+loadKommuner();
+loadKart();
+</script>
+</body>
+</html>
