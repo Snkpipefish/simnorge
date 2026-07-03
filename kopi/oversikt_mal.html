@@ -46,6 +46,9 @@ select, input { background:var(--flate2); color:var(--tekst);
   align-items:center; margin:4px 0; font-size:13px; }
 .barrad .verdi { text-align:right; color:var(--tekst2); }
 .to { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+#kommuneramme { border:1.5px solid rgba(74,134,232,0.6); border-radius:12px;
+  padding:16px 18px 20px; margin:12px 0 8px; }
+#kommuneramme .kort div { background:var(--flate2); }
 @media (max-width:800px){ .to { grid-template-columns:1fr; } }
 .fotnote { color:var(--tekst2); font-size:12.5px; margin:40px 0 10px;
   border-top:1px solid var(--kant); padding-top:16px; }
@@ -84,7 +87,9 @@ Kommuneresultatene ved stortingsvalget 2025 reproduseres eksakt.</p>
 </div>
 
 <h2>Kommunevelger</h2>
-<div style="margin:10px 0; position:relative; max-width:320px;">
+<p class="sub" style="margin-bottom:8px;">Alt innenfor rammen gjelder valgt kommune.</p>
+<section id="kommuneramme">
+<div style="margin:0 0 4px; position:relative; max-width:320px;">
 <input id="ksok" placeholder="Skriv kommunenavn…" autocomplete="off"
   style="width:100%;">
 <div id="kforslag" style="display:none; position:absolute; top:100%; left:0;
@@ -97,6 +102,7 @@ Kommuneresultatene ved stortingsvalget 2025 reproduseres eksakt.</p>
 <div><h2 style="font-size:16px;margin-top:12px;">Største holdningsgrupper</h2><div id="kgrupper"></div>
 <h2 style="font-size:16px;">Aldersfordeling</h2><div id="kalder"></div></div>
 </div>
+</section>
 
 <h2>Helse</h2>
 <p class="sub">Målte FHI-rater (primærhelsekontakt, standardisert per kommune) og forventet levealder
@@ -362,15 +368,14 @@ function vis(navn){
       +'<span class="verdi">'+fmt(n)+'</span>';
     ka.appendChild(r);});
 }
-function visForslag(){
-  var q=sok.value.trim().toLowerCase();
-  if(!q){forslag.style.display='none';return;}
+function visForslag(alle){
+  var q=alle?'':sok.value.trim().toLowerCase();
   var starter=[],inneholder=[];
   D.kommuner.forEach(function(k){
     var n=k.navn.toLowerCase();
-    if(n.indexOf(q)===0)starter.push(k.navn);
+    if(!q||n.indexOf(q)===0)starter.push(k.navn);
     else if(n.indexOf(q)>0)inneholder.push(k.navn);});
-  var treff=starter.concat(inneholder).slice(0,8);
+  var treff=starter.concat(inneholder);
   if(!treff.length){forslag.style.display='none';return;}
   forslag.innerHTML='';
   treff.forEach(function(navn){
@@ -386,8 +391,8 @@ function visForslag(){
   forslag.lastChild.style.borderBottom='none';
   forslag.style.display='block';
 }
-sok.addEventListener('input',visForslag);
-sok.addEventListener('focus',visForslag);
+sok.addEventListener('input',function(){visForslag(false);});
+sok.addEventListener('focus',function(){sok.select();visForslag(true);});
 sok.addEventListener('blur',function(){
   setTimeout(function(){forslag.style.display='none';},200);});
 sok.addEventListener('keydown',function(e){
