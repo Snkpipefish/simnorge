@@ -15,10 +15,34 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from kopi.holdning import HOVEDGRUPPE, HOVEDGRUPPER
+from kopi.holdning import AKSER, HOVEDGRUPPE, HOVEDGRUPPER
 from kopi.valg import PARTIER
 
 TILB = ["tilb_stemme", "tilb_flytte", "tilb_frivillig", "tilb_protest", "tilb_risiko"]
+
+# Kommunekorrelasjonene (Spearman) slik de var FØR geografien ble målt
+# (én sentralitetsvektor for alle akser) — historisk referanse til
+# holdningsgeografi-seksjonen. Nå-verdiene regnes ved bygging.
+_KORR_FOER = {"innvandring×klima": 0.98, "sentrum×innvandring": 0.90,
+              "sentrum×klima": 0.87, "øko×innvandring": 0.40}
+_KORR_PAR = [("innvandring", "klima"), ("sentrum_distrikt", "innvandring"),
+             ("sentrum_distrikt", "klima"), ("oko_fordeling", "innvandring")]
+_KORR_NAVN = ["innvandring×klima", "sentrum×innvandring", "sentrum×klima",
+              "øko×innvandring"]
+
+
+def _geo(v: pd.DataFrame, eu1994: dict[str, float] | None) -> dict:
+    """Holdningsgeografi-funnene: kommunekorrelasjoner før/nå per aksepar."""
+    g = v.groupby("kommune", observed=True)[AKSER].mean()
+    korr = {navn: {"foer": _KORR_FOER[navn],
+                   "naa": round(float(g[a].rank().corr(g[b].rank())), 2)}
+            for navn, (a, b) in zip(_KORR_NAVN, _KORR_PAR)}
+    ut: dict = {"korr": korr}
+    if eu1994:
+        s = pd.Series(eu1994)
+        ut["eu_spenn"] = [round(float(s.min()) * 100, 1),
+                          round(float(s.max()) * 100, 1)]
+    return ut
 
 
 def _bokstaver(v: pd.DataFrame, velgere: pd.DataFrame) -> dict:
@@ -67,6 +91,13 @@ def main() -> None:
     v = df[df["alder"] >= 16]
     velgere = v[~v["parti"].isin(["stemte ikke", "ikke stemmerett"])]
 
+    try:
+        from kopi.eu1994 import hent_eu1994
+        eu1994 = hent_eu1994()
+    except Exception as e:                     # siden skal kunne bygges offline
+        print(f"EU-1994 utilgjengelig ({e}) — kommunekort uten nei-andel.")
+        eu1994 = None
+
     nasjonal = {
         "total": int(len(df)),
         "voksne": int(len(v)),
@@ -102,9 +133,13 @@ def main() -> None:
         g16 = g[g["alder"] >= 16]
         vel = g16[~g16["parti"].isin(["stemte ikke", "ikke stemmerett"])]
         hg = (g16["holdningsgruppe"].value_counts(normalize=True) * 100).round(1)
+        rad_akser = [round(float(g16[a].mean())) for a in AKSER]
         kommuner.append({
             "kode": str(kode),
             "navn": str(g["kommune_navn"].iloc[0]),
+            "akser": rad_akser,
+            **({"eu1994": round(eu1994[str(kode)] * 100, 1)}
+               if eu1994 and str(kode) in eu1994 else {}),
             "n": int(len(g)),
             "inntekt": int(g["brutto_inntekt"].median() // 1000),
             "parti": {p: round(float((vel["parti"] == p).mean() * 100), 1)
@@ -125,7 +160,8 @@ def main() -> None:
     kommuner.sort(key=lambda k: k["navn"])
 
     data = {"nasjonal": nasjonal, "grupper": grupper, "hoved": hoved,
-            "hovedliste": HOVEDGRUPPER, "partier": PARTIER, "kommuner": kommuner}
+            "hovedliste": HOVEDGRUPPER, "partier": PARTIER,
+            "geo": _geo(v, eu1994), "kommuner": kommuner}
     mal = Path("kopi/oversikt_mal.html").read_text(encoding="utf-8")
     html = mal.replace("__DATA__", json.dumps(data, ensure_ascii=False,
                                               separators=(",", ":")))

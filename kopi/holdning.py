@@ -7,8 +7,15 @@ justerbart — ikke målt. Signalrekkefølgen er som bestilt:
 
 1. PARTI (sterkest): basisposisjon per akse fra partienes kjente profil.
 2. INNTEKT: skyver økonomiaksen mot marked med stigende inntektspersentil.
-3. BOSTED: kommunens sentralitetsklasse (Klass 128) skyver innvandrings-,
-   klima- og sentrum/distrikt-aksene.
+3. BOSTED: målt ESS-bostedsgradient (domicil, innen parti) per akse for
+   øko/innvandring/klima, koblet til kommunens sentralitetsklasse (Klass
+   128).
+4. REGION: målt NUTS2-residual (innen parti og bosted) per akse — liten,
+   men gir aksene ulik geografi (uten den kollapser holdningsgeografien
+   til én by/land-dimensjon).
+5. EU-1994 (kopi/eu1994.py): sentrum/distrikt-aksen ankres i kommunens
+   målte nei-andel fra folkeavstemningen — dens egen geografi, ikke en
+   kopi av sentralitetsindeksen. Uten anker: antatt sentralitetsskyv.
 
 Spredning: normalstøy per akse, større for hjemmesittere og 16-17-åringer
 (basis 50 — vi vet mindre om dem). Barn under 16 får ingen holdning (NaN).
@@ -58,8 +65,28 @@ PARTI_POSISJON: dict[str, tuple[float, float, float, float]] = {
 _INNTEKT_SKYV = 12.0
 
 # Sentralitetens skyv per akse ved mest sentral (klasse 1); lineært til
-# motsatt fortegn ved minst sentral (klasse 6). (ANTAKELSE.)
+# motsatt fortegn ved minst sentral (klasse 6). (ANTAKELSE — brukes bare
+# som fallback uten ESS-aggregater; med dem måles øko/innvandring/klima
+# fra domicil-gradienten, og kun sentrum/distrikt-elementet gjelder.)
 _SENTRALITET_SKYV = np.array([0.0, 9.0, 6.0, 15.0])
+
+# Sentrum/distrikt-aksens EU-1994-anker (kopi/eu1994.py): skyv =
+# -_EU_SKALA * (kommunens nei-andel - nasjonal nei-andel) * 100.
+# Geografien er MÅLT (nei-andel 25-94 %); skalaen og antakelsen om at
+# 1994-motsetningen fortsatt rangerer kommunene er ANTAKELSER.
+_EU_SKALA = 0.5
+_EU_NASJONAL = 0.522
+
+# Kommunenummerets fylkesprefiks (2024) -> NUTS2-region (2021), for det
+# målte regiontiltet fra ESS.
+_FYLKE_NUTS2 = {
+    "03": "NO08", "31": "NO08", "32": "NO08", "33": "NO08",   # Oslo og Viken
+    "34": "NO02",                                             # Innlandet
+    "39": "NO09", "40": "NO09", "42": "NO09",       # Agder og Sør-Østlandet
+    "11": "NO0A", "15": "NO0A", "46": "NO0A",                 # Vestlandet
+    "50": "NO06",                                             # Trøndelag
+    "18": "NO07", "55": "NO07", "56": "NO07",                 # Nord-Norge
+}
 
 # Støy (standardavvik) per person: vanlig / svakt signal (hjemmesittere, 16-17).
 _STOY = 10.0
@@ -107,6 +134,8 @@ GRUPPER: dict[str, tuple[float, ...]] = {
 # fra mikrodataene), erstattes antakelsene over med MÅLTE verdier:            #
 # - partiposisjon og spredning INNEN parti på øko/innvandring/klima           #
 # - målt inntektsgradient på økonomiaksen (i stedet for ±12-antakelsen)       #
+# - målt bosteds- (domicil) og regionsgradient (NUTS2) per akse i stedet     #
+#   for sentralitetsantakelsen på de tre målte aksene ("geo"-nøkkelen)       #
 # - gruppeprototypene ankres i partienes målte posisjon + avvikene under      #
 # sentrum_distrikt har ikke noe ESS-mål og forblir antakelse uansett.         #
 # --------------------------------------------------------------------------- #
@@ -206,8 +235,13 @@ def hent_sentralitet() -> dict[str, int]:
 
 
 def tildel_holdning(df: pd.DataFrame, *, seed: int = 0,
-                    sentralitet: dict[str, int] | None = None) -> pd.DataFrame:
-    """Legg på aksekolonnene og ``holdningsgruppe``. Deterministisk gitt seed."""
+                    sentralitet: dict[str, int] | None = None,
+                    eu1994: dict[str, float] | None = None) -> pd.DataFrame:
+    """Legg på aksekolonnene og ``holdningsgruppe``. Deterministisk gitt seed.
+
+    ``eu1994`` (kommune -> nei-andel 1994, fra kopi/eu1994.py) gir sentrum/
+    distrikt-aksen målt geografi; uten den gjelder sentralitetsantakelsen.
+    Sendes inn eksplisitt (hentes ikke her) så testene forblir offline."""
     sentralitet = sentralitet if sentralitet is not None else hent_sentralitet()
     n = len(df)
     rng = np.random.default_rng(seed)
@@ -251,7 +285,10 @@ def tildel_holdning(df: pd.DataFrame, *, seed: int = 0,
     else:
         skar[:, 0] += (pct - 0.5) * 2.0 * _INNTEKT_SKYV
 
-    # 3. Sentralitet: klasse 1..6 -> faktor +1..-1.
+    # 3. Bosted og region. Med ESS-aggregater: målt domicil-gradient (innen
+    # parti) per akse for øko/innvandring/klima + målt NUTS2-residual; den
+    # antatte sentralitetsvektoren gjelder da bare sentrum/distrikt-aksen.
+    # Uten: hele den antatte vektoren, som før.
     klasser = df["kommune"].cat.categories.map(
         lambda k: sentralitet.get(str(k), 0)).to_numpy()
     mangler = [str(k) for k, s in zip(df["kommune"].cat.categories, klasser)
@@ -260,8 +297,43 @@ def tildel_holdning(df: pd.DataFrame, *, seed: int = 0,
         logger.warning("Sentralitet mangler for %d kommuner (får midtklasse 4, "
                        "logget): %s", len(mangler), mangler)
     klasser = np.where(klasser == 0, 4, klasser)
-    faktor = (3.5 - klasser[df["kommune"].cat.codes]) / 2.5   # +1 .. -1
-    skar += faktor[:, None] * _SENTRALITET_SKYV[None, :]
+    kl_person = klasser[df["kommune"].cat.codes].astype(np.float64)
+    faktor = (3.5 - kl_person) / 2.5                          # +1 .. -1
+    if ess and "geo" in ess:
+        # Sentralitetsklasse 1..6 -> domicil-posisjon 1..5 (lineær mapping —
+        # ANTAKELSE; selve gradienten per posisjon er målt).
+        pos = 1.0 + (kl_person - 1.0) * (4.0 / 5.0)
+        i0 = np.clip(np.floor(pos).astype(int), 1, 4)
+        frac = pos - i0
+        nuts = df["kommune"].cat.categories.map(
+            lambda k: _FYLKE_NUTS2.get(str(k)[:2], "")).to_numpy()
+        kom_koder = df["kommune"].cat.codes.to_numpy()
+        for j, akse in enumerate(["oko_fordeling", "innvandring", "klima"]):
+            grad = np.asarray(ess["geo"]["bosted"][akse], dtype=np.float64)
+            skar[:, j] += grad[i0 - 1] * (1.0 - frac) + grad[i0] * frac
+            reg = ess["geo"]["region"][akse]
+            per_kommune = np.array([reg.get(r, 0.0) for r in nuts])
+            skar[:, j] += per_kommune[kom_koder]
+        logger.info("Bosteds- og regiongradienter på øko/innvandring/klima: "
+                    "MÅLT fra ESS (domicil + NUTS2, innen parti).")
+    else:
+        skar[:, :3] += faktor[:, None] * _SENTRALITET_SKYV[None, :3]
+
+    # Sentrum/distrikt: EU-1994-anker (målt geografi) når det er sendt inn,
+    # ellers sentralitetsantakelsen.
+    if eu1994:
+        nei = df["kommune"].cat.categories.map(
+            lambda k: eu1994.get(str(k), _EU_NASJONAL)).to_numpy(dtype=float)
+        uten = int((~df["kommune"].cat.categories.isin(eu1994)).sum())
+        if uten:
+            logger.warning("EU-1994 mangler for %d kommuner — de får "
+                           "nasjonal nei-andel (nøytralt skyv).", uten)
+        skar[:, 3] += (-_EU_SKALA * (nei - _EU_NASJONAL) * 100.0)[
+            df["kommune"].cat.codes]
+        logger.info("Sentrum/distrikt-aksen ankret i EU-1994 (målt nei-andel "
+                    "per kommune, antatt skala %.2f).", _EU_SKALA)
+    else:
+        skar[:, 3] += faktor * _SENTRALITET_SKYV[3]
 
     # 4. Spredning: målt innen-parti-sd (ESS) på de målte aksene; ellers
     # antatt flat støy (svakere signal for dem uten avgitt stemme).

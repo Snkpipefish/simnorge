@@ -19,6 +19,15 @@ hvert parti, og målt posisjon for hjemmesittere (vote == 2):
 I tillegg måles inntektsgradienten på økonomiaksen (hinctnta-desil mot
 landssnittet) — den erstatter det antatte ±12-skyvet.
 
+GEOGRAFI (nøkkelen "geo"): to målte gradienter INNEN parti, per akse —
+- bosted: domicil (1 storby .. 5 gård/spredt), residual etter partisnitt.
+  Erstatter den antatte sentralitetsvektoren i holdning.py, som var samme
+  variabel ganger tre konstanter (rang 1) og dermed tvang all holdnings-
+  geografi ned i én dimensjon. Målt har hver akse sin egen profil.
+- region: NUTS2 (landsdel), residual etter BÅDE parti og bosted (dobbelt
+  residualisert så by/land ikke telles to ganger). Små (±2-4 poeng), men
+  målte og ulike per akse.
+
 sentrum_distrikt har ikke noe ESS-mål og forblir antakelse. Aggregatene
 lagres i kopi/ess_posisjoner.json; selve mikrodataene forlater aldri maskinen.
 Partikoder verifisert både mot kodebok og empirisk (MDG-koden identifisert
@@ -168,6 +177,53 @@ def beregn_personlighet(df: pd.DataFrame, parti: pd.Series) -> dict:
     return ut
 
 
+# Aksene som får målt geografi (sentrum_distrikt har ingen ESS-kilde).
+_GEO_AKSER = ["oko_fordeling", "innvandring", "klima"]
+_BOSTED_NAVN = ["storby", "forstad", "smaaby", "bygd", "gaard/spredt"]
+_NUTS2 = ["NO02", "NO06", "NO07", "NO08", "NO09", "NO0A"]
+
+
+def beregn_geo(df: pd.DataFrame, parti: pd.Series,
+               akser: pd.DataFrame) -> dict:
+    """MÅLTE geografiske gradienter innen parti, per akse (poeng 0-100).
+
+    bosted[akse] er en liste på 5 (domicil storby..gård/spredt); region[akse]
+    er NUTS2 -> avvik. Region regnes på residualen etter bosted, så de to
+    tiltene kan legges sammen uten dobbelttelling. Celler under min_n
+    interpoleres (bosted) eller settes 0 (region) — begge logges implisitt
+    via None-verdiene før utfylling."""
+    w = df["anweight"]
+    dom = _gyldig(df["domicil"], 5)
+    min_n = 50
+    ut = {"bosted": {}, "region": {}, "bosted_navn": _BOSTED_NAVN}
+    for akse in _GEO_AKSER:
+        v = akser[akse]
+        resid = pd.Series(np.nan, index=v.index)
+        for p in parti.dropna().unique():
+            m = (parti == p) & v.notna()
+            mu, _, n = _vektet(v[m], w[m])
+            if n >= 5:
+                resid[m] = v[m] - mu
+
+        rad = []
+        for d in range(1, 6):
+            mu, _, n = _vektet(resid[dom == d], w[dom == d])
+            rad.append(round(mu, 1) if n >= min_n else None)
+        bosted = pd.Series(rad, dtype="float").interpolate(
+            limit_direction="both").fillna(0.0)
+        ut["bosted"][akse] = bosted.round(1).tolist()
+
+        # Region på det som er igjen etter parti OG bosted.
+        resid2 = resid - dom.map(dict(enumerate(bosted, start=1)))
+        rr = {}
+        for reg in _NUTS2:
+            mu, _, n = _vektet(resid2[df["region"] == reg],
+                               w[df["region"] == reg])
+            rr[reg] = round(mu, 1) if n >= min_n else 0.0
+        ut["region"][akse] = rr
+    return ut
+
+
 def beregn_posisjoner(csv: Path = CSV) -> dict:
     df = pd.read_csv(csv, low_memory=False)
     df = df[df["cntry"] == "NO"].copy()
@@ -203,6 +259,7 @@ def beregn_posisjoner(csv: Path = CSV) -> dict:
         limit_direction="both").round(1).tolist()
     ut["oko_inntektsdesil"] = verdier
 
+    ut["geo"] = beregn_geo(df, parti, akser)
     ut["personlighet"] = beregn_personlighet(df, parti)
     ut["helse"] = beregn_helse(df)
     return ut

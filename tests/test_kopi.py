@@ -168,6 +168,28 @@ def test_holdning_parti_og_sentralitet_styrer():
     assert snitt["0301"] > snitt["1151"] + 5
 
 
+def test_holdning_eu1994_anker_styrer_sentrum():
+    from kopi.holdning import tildel_holdning
+    df = _syntetisk_kopi()
+    sent = {"0301": 1, "1151": 6}
+    # Målt-lignende nei-andeler: ja-kommune vs sterk nei-kommune.
+    a = tildel_holdning(df, seed=1, sentralitet=sent,
+                        eu1994={"0301": 0.33, "1151": 0.85})
+    voksen = a[a["alder"] >= 16]
+    snitt = voksen.groupby("kommune", observed=True)["sentrum_distrikt"].mean()
+    assert snitt["0301"] > snitt["1151"] + 15
+    # Uten anker gjelder sentralitetsantakelsen — mindre spenn, samme retning.
+    b = tildel_holdning(df, seed=1, sentralitet=sent)
+    snitt_b = (b[b["alder"] >= 16]
+               .groupby("kommune", observed=True)["sentrum_distrikt"].mean())
+    assert snitt_b["0301"] > snitt_b["1151"] + 5
+    # De andre aksene skal ikke påvirkes av EU-ankeret.
+    for akse in ["oko_fordeling", "innvandring", "klima"]:
+        pd_a = voksen[akse].mean()
+        pd_b = b[b["alder"] >= 16][akse].mean()
+        assert abs(pd_a - pd_b) < 0.5
+
+
 def test_kriminalitet_flagg_og_trygghet():
     df = _syntetisk_kopi().drop(columns=["trygghet"])
     a = _kriminalitetsmodell().tildel(df, seed=5)
@@ -349,6 +371,7 @@ if __name__ == "__main__":
     test_rake_tom_kommune_gir_normaliserte_rader()
     test_holdning_barn_uten_gruppe_og_deterministisk()
     test_holdning_parti_og_sentralitet_styrer()
+    test_holdning_eu1994_anker_styrer_sentrum()
     test_kriminalitet_flagg_og_trygghet()
     test_holdning_trygghet_skiller_grupper()
     test_holdning_tillit_og_verdi_skiller_grupper()

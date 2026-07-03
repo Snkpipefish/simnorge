@@ -77,10 +77,19 @@ justeres på ett sted.
 `data/ess/`) erstattes de *antatte* partiposisjonene med **målte**: posisjon
 og spredning innen hvert parti på økonomi/innvandring/klima, målt
 inntektsgradient, målte tillits- og verdiposisjoner (inkl. hjemmesittere),
-og gruppeprototyper ankret i partienes målte posisjon. Kjør
+og gruppeprototyper ankret i partienes målte posisjon. I tillegg måles
+**geografien per akse**: bostedsgradient (domicil, innen parti) og
+NUTS2-regionresidualer — uten dem var all holdningsgeografi én by/land-
+dimensjon ganget med tre konstanter (kommunekorrelasjonen innvandring ×
+klima var 0,98; målt er den 0,55). Kjør
 `.venv/bin/python -m kopi.ess` for å (re)bygge aggregatene
 (`kopi/ess_posisjoner.json`); uten dem gjelder de dokumenterte antakelsene.
-Kun sentrum–distrikt-aksen forblir antakelse (ESS mangler mål for den).
+
+**EU-1994-anker** (`kopi/eu1994.py`): sentrum–distrikt-aksen (som ESS
+mangler mål for) ankres i kommunens **målte nei-andel** fra folke-
+avstemningen 1994 (SSB 01187, 25–94 %), kodekjedet 1994→2024 via Klass
+(8 delte kommuner likedeles; nasjonal kontroll 52,2 % = fasit). Antakelsen
+er at Rokkan-motsetningen fortsatt rangerer kommunene; skalaen er antatt.
 
 ## Kom i gang
 

@@ -324,6 +324,64 @@
   7.5,
   7.3
  ],
+ "geo": {
+  "bosted": {
+   "oko_fordeling": [
+    -0.1,
+    1.1,
+    0.7,
+    -2.2,
+    0.4
+   ],
+   "innvandring": [
+    3.4,
+    0.9,
+    -0.2,
+    -1.6,
+    -0.8
+   ],
+   "klima": [
+    3.9,
+    -0.0,
+    2.0,
+    -1.7,
+    -3.6
+   ]
+  },
+  "region": {
+   "oko_fordeling": {
+    "NO02": -2.8,
+    "NO06": -1.8,
+    "NO07": -0.8,
+    "NO08": 1.4,
+    "NO09": -0.6,
+    "NO0A": 3.1
+   },
+   "innvandring": {
+    "NO02": 1.8,
+    "NO06": 0.2,
+    "NO07": -0.9,
+    "NO08": -0.5,
+    "NO09": -0.4,
+    "NO0A": 0.0
+   },
+   "klima": {
+    "NO02": 0.3,
+    "NO06": -0.8,
+    "NO07": -1.3,
+    "NO08": 1.5,
+    "NO09": -0.9,
+    "NO0A": -0.3
+   }
+  },
+  "bosted_navn": [
+   "storby",
+   "forstad",
+   "smaaby",
+   "bygd",
+   "gaard/spredt"
+  ]
+ },
  "personlighet": {
   "E": {
    "inntektsdesil": [

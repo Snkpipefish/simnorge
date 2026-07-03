@@ -12,6 +12,7 @@ import time
 import pandas as pd
 
 from data import SSBClient
+from kopi.eu1994 import hent_eu1994
 from kopi.holdning import tildel_holdning, GRUPPE_AKSER
 from kopi.kriminalitet import KriminalitetsModell
 from kopi.utdanning import UtdanningsModell
@@ -44,7 +45,7 @@ def main() -> None:
     from kopi.helse import HelseModell
     df = HelseModell(ess=ess).tildel(df, seed=args.seed + 35)
     df = TillitVerdiModell(ssb).tildel(df, seed=args.seed + 40)
-    df = tildel_holdning(df, seed=args.seed)
+    df = tildel_holdning(df, seed=args.seed, eu1994=hent_eu1994(ssb))
     df.to_parquet(args.fil, index=False)
     print(f"\nOppdaterte {args.fil}: {len(GRUPPE_AKSER)} akser + utdanning + "
           f"livssyn + kriminalitetsflagg + holdningsgruppe/hovedgruppe "

@@ -98,6 +98,17 @@ Kommuneresultatene ved stortingsvalget 2025 reproduseres eksakt.</p>
 <h2 style="font-size:16px;">Aldersfordeling</h2><div id="kalder"></div></div>
 </div>
 
+<h2>Holdningsgeografi — fire akser, fire kart</h2>
+<p class="sub">Aksene delte tidligere én by/land-geografi: kommunesnittene på innvandring og klima
+korrelerte 0,98 — samme kart tegnet flere ganger. Nå bæres geografien av målte kilder:
+bostedsgradient per akse (ESS, innen parti), landsdelsavvik (ESS, NUTS2), og for sentrum–distrikt
+kommunens faktiske nei-andel fra EU-avstemningen 1994 (SSB 01187<span id="geoeu"></span>).
+Resten av samvariasjonen er reell — også målte velgerposisjoner følger hverandre på tvers av
+partier — og presses ikke lavere.</p>
+<div class="tabellboks" style="max-width:520px;">
+<table id="geotab"><thead><tr><th>Aksepar (kommunesnitt)</th><th>Før (antatt geo)</th><th>Nå (målt geo)</th></tr></thead>
+<tbody></tbody></table></div>
+
 <h2>Helse</h2>
 <p class="sub">Målte FHI-rater (primærhelsekontakt, standardisert per kommune) og forventet levealder
 (kommunenivå + fylkets utdanningsgradient). Egenvurdert helse fra ESS med målt inntekts- og
@@ -125,13 +136,16 @@ koblingen til bokstavene er en dokumentert antakelse. E = utadvendt, N = intuiti
 <p class="fotnote"><b>Kilder og ærlighet.</b> Målt (SSB): befolkning 07459, inntekt 06655/06944,
 valg 08092/13085/13698, utdanning 09429/08921/13555, kirkemedlemskap 12025,
 kriminalitet 04621/08487/11453, tillit 13908, deltakelse 10440, flytting 05540,
-frivillighet 13826. Målt (FHI Folkehelsestatistikk, åpent API): primærhelse-
-kontakt KPR (369), forventet levealder (660/507). Målt (ESS runde 10+11, norsk
-utvalg): partiposisjoner og spredning på holdningsaksene, inntekts-/utdannings-
-gradienter, egenvurdert helse, personlighetsgradienter (Schwartz + sosial
-omgang). Antatt (dokumentert i koden): personlighetsbasissatser, koblingen
-Schwartz→bokstav, sentrum–distrikt-aksen, gruppeprototypenes avvik og
-sammenveiingene av målte ingredienser. Generert av lag_html.py fra
+frivillighet 13826, EU-avstemningen 1994 per kommune 01187 (kodekjedet
+1994→2024 via Klass; nasjonal kontroll 52,2 % = fasit). Målt (FHI Folkehelse-
+statistikk, åpent API): primærhelsekontakt KPR (369), forventet levealder
+(660/507). Målt (ESS runde 10+11, norsk utvalg): partiposisjoner og spredning
+på holdningsaksene, bostedsgradient per akse (innen parti) og landsdelsavvik
+(NUTS2), inntekts-/utdanningsgradienter, egenvurdert helse, personlighets-
+gradienter (Schwartz + sosial omgang). Antatt (dokumentert i koden):
+personlighetsbasissatser, koblingen Schwartz→bokstav, partienes sentrum–
+distrikt-nivåer og EU-ankerets skala (geografien er målt), gruppeprototypenes
+avvik og sammenveiingene av målte ingredienser. Generert av lag_html.py fra
 kopi_norge.parquet.</p>
 </main>
 <script>
@@ -314,6 +328,20 @@ sorter('n');retning=-1;
 })();
 
 (function(){
+if(!D.geo)return;
+var tb=document.querySelector('#geotab tbody');
+Object.keys(D.geo.korr).forEach(function(navn){
+  var k=D.geo.korr[navn],tr=document.createElement('tr');
+  tr.innerHTML='<td>'+navn+'</td><td>'+k.foer.toFixed(2)+'</td><td><b>'
+    +k.naa.toFixed(2)+'</b></td>';
+  tb.appendChild(tr);});
+if(D.geo.eu_spenn){
+  document.getElementById('geoeu').textContent=
+    '; spenn '+D.geo.eu_spenn[0].toLocaleString('nb-NO')+'–'
+    +D.geo.eu_spenn[1].toLocaleString('nb-NO')+' % nei';}
+})();
+
+(function(){
 var sok=document.getElementById('ksok'),forslag=document.getElementById('kforslag');
 function bar(el,navn,verdi,maks,farge){
   var r=document.createElement('div');r.className='barrad';
@@ -325,15 +353,21 @@ function vis(navn){
   var k=null;D.kommuner.forEach(function(x){if(x.navn===navn)k=x;});
   if(!k)return;
   var nk=document.getElementById('knokkel');nk.innerHTML='';
-  [[fmt(k.n),'innbyggere'],[k.inntekt+' 000 kr','medianinntekt 17+'],
+  var kort=[[fmt(k.n),'innbyggere'],[k.inntekt+' 000 kr','medianinntekt 17+'],
    [k.deltakelse+' %','valgdeltakelse 18+'],[k.trygghet,'trygghet (snitt)'],
    [k.tillit,'tillit (snitt)'],[k.dnk+' %','medlem Dnk'],
    [k.levealder+' år','forventet levealder'],
    [k.psykisk+' %','psykisk helsekontakt/år'],
    [k.helse_god+' %','god egenvurdert helse'],
    [k.tilb_stemme,'stemmetilbøyelighet'],
-   [k.tilb_protest,'protesttilbøyelighet']]
-  .forEach(function(p){var d=document.createElement('div');
+   [k.tilb_protest,'protesttilbøyelighet']];
+  if(k.akser)kort.push([k.akser[0],'øko: omfordeling→marked'],
+   [k.akser[1],'innvandring: restriktiv→liberal'],
+   [k.akser[2],'klima: vekst→vern'],
+   [k.akser[3],'sentrum–distrikt (snitt)']);
+  if(k.eu1994!==undefined)kort.push(
+   [k.eu1994.toLocaleString('nb-NO')+' %','nei ved EU-avstemningen 1994']);
+  kort.forEach(function(p){var d=document.createElement('div');
     d.innerHTML='<b>'+p[0]+'</b><span>'+p[1]+'</span>';nk.appendChild(d);});
   var kp=document.getElementById('kparti');kp.innerHTML='';
   var par=Object.keys(k.parti).sort(function(a,b){return k.parti[b]-k.parti[a];});
