@@ -20,30 +20,6 @@ from kopi.valg import PARTIER
 
 TILB = ["tilb_stemme", "tilb_flytte", "tilb_frivillig", "tilb_protest", "tilb_risiko"]
 
-# Kommunekorrelasjonene (Spearman) slik de var FØR geografien ble målt
-# (én sentralitetsvektor for alle akser) — historisk referanse til
-# holdningsgeografi-seksjonen. Nå-verdiene regnes ved bygging.
-_KORR_FOER = {"innvandring×klima": 0.98, "sentrum×innvandring": 0.90,
-              "sentrum×klima": 0.87, "øko×innvandring": 0.40}
-_KORR_PAR = [("innvandring", "klima"), ("sentrum_distrikt", "innvandring"),
-             ("sentrum_distrikt", "klima"), ("oko_fordeling", "innvandring")]
-_KORR_NAVN = ["innvandring×klima", "sentrum×innvandring", "sentrum×klima",
-              "øko×innvandring"]
-
-
-def _geo(v: pd.DataFrame, eu1994: dict[str, float] | None) -> dict:
-    """Holdningsgeografi-funnene: kommunekorrelasjoner før/nå per aksepar."""
-    g = v.groupby("kommune", observed=True)[AKSER].mean()
-    korr = {navn: {"foer": _KORR_FOER[navn],
-                   "naa": round(float(g[a].rank().corr(g[b].rank())), 2)}
-            for navn, (a, b) in zip(_KORR_NAVN, _KORR_PAR)}
-    ut: dict = {"korr": korr}
-    if eu1994:
-        s = pd.Series(eu1994)
-        ut["eu_spenn"] = [round(float(s.min()) * 100, 1),
-                          round(float(s.max()) * 100, 1)]
-    return ut
-
 
 def _bokstaver(v: pd.DataFrame, velgere: pd.DataFrame) -> dict:
     """E/N/F/J-andeler (%) per inntektskvintil og per parti — tallene som
@@ -160,8 +136,7 @@ def main() -> None:
     kommuner.sort(key=lambda k: k["navn"])
 
     data = {"nasjonal": nasjonal, "grupper": grupper, "hoved": hoved,
-            "hovedliste": HOVEDGRUPPER, "partier": PARTIER,
-            "geo": _geo(v, eu1994), "kommuner": kommuner}
+            "hovedliste": HOVEDGRUPPER, "partier": PARTIER, "kommuner": kommuner}
     mal = Path("kopi/oversikt_mal.html").read_text(encoding="utf-8")
     html = mal.replace("__DATA__", json.dumps(data, ensure_ascii=False,
                                               separators=(",", ":")))

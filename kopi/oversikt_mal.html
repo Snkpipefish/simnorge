@@ -98,17 +98,6 @@ Kommuneresultatene ved stortingsvalget 2025 reproduseres eksakt.</p>
 <h2 style="font-size:16px;">Aldersfordeling</h2><div id="kalder"></div></div>
 </div>
 
-<h2>Holdningsgeografi — fire akser, fire kart</h2>
-<p class="sub">Aksene delte tidligere én by/land-geografi: kommunesnittene på innvandring og klima
-korrelerte 0,98 — samme kart tegnet flere ganger. Nå bæres geografien av målte kilder:
-bostedsgradient per akse (ESS, innen parti), landsdelsavvik (ESS, NUTS2), og for sentrum–distrikt
-kommunens faktiske nei-andel fra EU-avstemningen 1994 (SSB 01187<span id="geoeu"></span>).
-Resten av samvariasjonen er reell — også målte velgerposisjoner følger hverandre på tvers av
-partier — og presses ikke lavere.</p>
-<div class="tabellboks" style="max-width:520px;">
-<table id="geotab"><thead><tr><th>Aksepar (kommunesnitt)</th><th>Før (antatt geo)</th><th>Nå (målt geo)</th></tr></thead>
-<tbody></tbody></table></div>
-
 <h2>Helse</h2>
 <p class="sub">Målte FHI-rater (primærhelsekontakt, standardisert per kommune) og forventet levealder
 (kommunenivå + fylkets utdanningsgradient). Egenvurdert helse fra ESS med målt inntekts- og
@@ -325,20 +314,6 @@ function sorter(felt){
     tbody.appendChild(tr);});
 }
 sorter('n');retning=-1;
-})();
-
-(function(){
-if(!D.geo)return;
-var tb=document.querySelector('#geotab tbody');
-Object.keys(D.geo.korr).forEach(function(navn){
-  var k=D.geo.korr[navn],tr=document.createElement('tr');
-  tr.innerHTML='<td>'+navn+'</td><td>'+k.foer.toFixed(2)+'</td><td><b>'
-    +k.naa.toFixed(2)+'</b></td>';
-  tb.appendChild(tr);});
-if(D.geo.eu_spenn){
-  document.getElementById('geoeu').textContent=
-    '; spenn '+D.geo.eu_spenn[0].toLocaleString('nb-NO')+'–'
-    +D.geo.eu_spenn[1].toLocaleString('nb-NO')+' % nei';}
 })();
 
 (function(){
