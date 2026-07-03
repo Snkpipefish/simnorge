@@ -95,16 +95,41 @@ Kommuneresultatene ved stortingsvalget 2025 reproduseres eksakt.</p>
 <h2 style="font-size:16px;">Aldersfordeling</h2><div id="kalder"></div></div>
 </div>
 
+<h2>Helse</h2>
+<p class="sub">Målte FHI-rater (primærhelsekontakt, standardisert per kommune) og forventet levealder
+(kommunenivå + fylkets utdanningsgradient). Egenvurdert helse fra ESS med målt inntekts- og
+utdanningsgradient. Kommunetallene ligger i kommunevelgeren over.</p>
+<div class="kort" id="helsekort"></div>
+
+<h2>Tilbøyeligheter per hovedgruppe</h2>
+<p class="sub">Snitt 0–100. Stemme/flytte/frivillig har målt basis; protest og risiko er antakelser fra egne kolonner.</p>
+<div class="tabellboks"><table id="tilbtab"><thead></thead><tbody></tbody></table></div>
+
+<h2>Personlighetsbokstavene mot inntekt og parti</h2>
+<p class="sub">Andel med hver bokstav (%). Gradientene er målt i ESS (Schwartz-verdier + sosial omgang);
+koblingen til bokstavene er en dokumentert antakelse. E = utadvendt, N = intuitiv, F = følelsesstyrt, P = spontan.</p>
+<div class="to">
+<div><h2 style="font-size:16px;">Etter inntektskvintil (17+)</h2>
+<div class="tabellboks"><table id="bokstavinntekt"><thead></thead><tbody></tbody></table></div></div>
+<div><h2 style="font-size:16px;">Etter parti (velgere)</h2>
+<div class="tabellboks"><table id="bokstavparti"><thead></thead><tbody></tbody></table></div></div>
+</div>
+
 <h2>Personlighetstyper nasjonalt</h2>
-<p class="sub">Ren antakelse: uavhengige bokstaver gitt kjønn og alder — med vilje ikke koblet til parti eller inntekt.</p>
+<p class="sub">Basissatser (kjønn/alder) er antakelser; koblingen til inntekt, utdanning og parti er målte ESS-gradienter.</p>
 <div id="ptyper" class="to"></div>
 
 <p class="fotnote"><b>Kilder og ærlighet.</b> Målt (SSB): befolkning 07459, inntekt 06655/06944,
 valg 08092/13085/13698, utdanning 09429/08921/13555, kirkemedlemskap 12025,
 kriminalitet 04621/08487/11453, tillit 13908, deltakelse 10440, flytting 05540,
-frivillighet 13826. Antatt (dokumentert i koden): personlighetstyper,
-verdiliberal-aksen, gruppeprototypene, og sammenveiingene av målte ingredienser.
-Generert av lag_html.py fra kopi_norge.parquet.</p>
+frivillighet 13826. Målt (FHI Folkehelsestatistikk, åpent API): primærhelse-
+kontakt KPR (369), forventet levealder (660/507). Målt (ESS runde 10+11, norsk
+utvalg): partiposisjoner og spredning på holdningsaksene, inntekts-/utdannings-
+gradienter, egenvurdert helse, personlighetsgradienter (Schwartz + sosial
+omgang). Antatt (dokumentert i koden): personlighetsbasissatser, koblingen
+Schwartz→bokstav, sentrum–distrikt-aksen, gruppeprototypenes avvik og
+sammenveiingene av målte ingredienser. Generert av lag_html.py fra
+kopi_norge.parquet.</p>
 </main>
 <script>
 var D = __DATA__;
@@ -301,7 +326,12 @@ function vis(navn){
   var nk=document.getElementById('knokkel');nk.innerHTML='';
   [[fmt(k.n),'innbyggere'],[k.inntekt+' 000 kr','medianinntekt 17+'],
    [k.deltakelse+' %','valgdeltakelse 18+'],[k.trygghet,'trygghet (snitt)'],
-   [k.tillit,'tillit (snitt)'],[k.dnk+' %','medlem Dnk']]
+   [k.tillit,'tillit (snitt)'],[k.dnk+' %','medlem Dnk'],
+   [k.levealder+' år','forventet levealder'],
+   [k.psykisk+' %','psykisk helsekontakt/år'],
+   [k.helse_god+' %','god egenvurdert helse'],
+   [k.tilb_stemme,'stemmetilbøyelighet'],
+   [k.tilb_protest,'protesttilbøyelighet']]
   .forEach(function(p){var d=document.createElement('div');
     d.innerHTML='<b>'+p[0]+'</b><span>'+p[1]+'</span>';nk.appendChild(d);});
   var kp=document.getElementById('kparti');kp.innerHTML='';
@@ -326,6 +356,48 @@ function vis(navn){
 }
 sok.addEventListener('change',function(){vis(sok.value);});
 vis('Oslo - Oslove');sok.value='Oslo - Oslove';
+})();
+
+(function(){
+var h=D.nasjonal.helse, hk=document.getElementById('helsekort');
+[[h.psykisk+' %','psykisk helsekontakt siste år'],
+ [h.muskel+' %','muskel/skjelett-kontakt siste år'],
+ [h.helse_god+' %','god egenvurdert helse (16+)'],
+ [h.levealder_menn+' år','forventet levealder menn'],
+ [h.levealder_kvinner+' år','forventet levealder kvinner']]
+.forEach(function(p){var d=document.createElement('div');
+  d.innerHTML='<b>'+p[0]+'</b><span>'+p[1]+'</span>';hk.appendChild(d);});
+
+function fyllTabell(id, hodenavn, rader){
+  var thead=document.querySelector('#'+id+' thead');
+  var tbody=document.querySelector('#'+id+' tbody');
+  var tr=document.createElement('tr');
+  hodenavn.forEach(function(t){var th=document.createElement('th');
+    th.textContent=t;th.style.cursor='default';tr.appendChild(th);});
+  thead.appendChild(tr);
+  rader.forEach(function(r){
+    var tr=document.createElement('tr');
+    r.forEach(function(c,i){var td=document.createElement('td');
+      if(typeof c==='object'){td.innerHTML=c.html;}else{td.textContent=c;}
+      tr.appendChild(td);});
+    tbody.appendChild(tr);});
+}
+var TN=['tilb_stemme','tilb_flytte','tilb_frivillig','tilb_protest','tilb_risiko'];
+fyllTabell('tilbtab', ['Hovedgruppe','Stemme','Flytte','Frivillig','Protest','Risiko'],
+  D.hovedliste.map(function(hg){
+    var t=D.nasjonal.tilb_hoved[hg]||{};
+    return [{html:'<span class="dot" style="background:'+FARGE[hg]+'"></span>'+hg}]
+      .concat(TN.map(function(k){return t[k];}));}));
+
+var KV=['laveste','2.','3.','4.','høyeste'];
+fyllTabell('bokstavinntekt', ['Kvintil','E %','N %','F %','P %'],
+  D.nasjonal.bokstaver.kvintil.map(function(r,i){
+    return [KV[i], r.E, r.N, r.F, r.P];}));
+var partiListe=Object.keys(D.nasjonal.bokstaver.parti);
+partiListe.sort(function(a,b){return D.nasjonal.bokstaver.parti[b].N-D.nasjonal.bokstaver.parti[a].N;});
+fyllTabell('bokstavparti', ['Parti','E %','N %','F %','P %'],
+  partiListe.map(function(p){var r=D.nasjonal.bokstaver.parti[p];
+    return [p, r.E, r.N, r.F, r.P];}));
 })();
 
 (function(){

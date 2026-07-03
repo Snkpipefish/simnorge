@@ -21,6 +21,24 @@ from kopi.valg import PARTIER
 TILB = ["tilb_stemme", "tilb_flytte", "tilb_frivillig", "tilb_protest", "tilb_risiko"]
 
 
+def _bokstaver(v: pd.DataFrame, velgere: pd.DataFrame) -> dict:
+    """E/N/F/J-andeler (%) per inntektskvintil og per parti — tallene som
+    viser de målte ESS-tiltene i praksis."""
+    def andeler(g: pd.DataFrame) -> dict:
+        t = g["personlighetstype"].astype(str)
+        return {"E": round(float(t.str[0].eq("E").mean() * 100), 1),
+                "N": round(float(t.str[1].eq("N").mean() * 100), 1),
+                "F": round(float(t.str[2].eq("F").mean() * 100), 1),
+                "P": round(float(t.str[3].eq("P").mean() * 100), 1)}
+
+    m17 = v[v["alder"] >= 17].copy()
+    m17["kvintil"] = pd.qcut(m17["brutto_inntekt"], 5, labels=False)
+    kvintil = [andeler(g) for _, g in m17.groupby("kvintil", observed=True)]
+    parti = {str(p): andeler(g)
+             for p, g in velgere.groupby("parti", observed=True)}
+    return {"kvintil": kvintil, "parti": parti}
+
+
 def gruppestat(v: pd.DataFrame, velgere: pd.DataFrame, kol: str) -> list[dict]:
     ut = []
     for navn, g in v.groupby(kol, observed=True):
@@ -62,6 +80,18 @@ def main() -> None:
                          df["personlighetstype"].value_counts().items()},
         "utsatt_vold": round(float(v["utsatt_vold"].mean() * 100), 1),
         "dnk": round(float(df["medlem_dnk"].mean() * 100), 1),
+        "helse": {
+            "psykisk": round(float(df["psykisk_kontakt"].mean() * 100), 1),
+            "muskel": round(float(df["muskel_kontakt"].mean() * 100), 1),
+            "helse_god": round(float(v["helse_god"].mean() * 100), 1),
+            "levealder_menn": round(float(
+                df[df["kjonn"] == "mann"]["forventet_levealder"].mean()), 1),
+            "levealder_kvinner": round(float(
+                df[df["kjonn"] == "kvinne"]["forventet_levealder"].mean()), 1),
+        },
+        "bokstaver": _bokstaver(v, velgere),
+        "tilb_hoved": {str(h): {t: round(float(g[t].mean()), 1) for t in TILB}
+                       for h, g in v.groupby("hovedgruppe", observed=True)},
     }
     grupper = gruppestat(v, velgere, "holdningsgruppe")
     hoved = gruppestat(v, velgere, "hovedgruppe")
@@ -86,6 +116,11 @@ def main() -> None:
             "grupper": [[k, float(x)] for k, x in hg.head(5).items()],
             "alder": [int(((g["alder"] >= a) & (g["alder"] < a + 10)).sum())
                       for a in aldersbins] + [int((g["alder"] >= 100).sum())],
+            "levealder": round(float(g["forventet_levealder"].mean()), 1),
+            "psykisk": round(float(g["psykisk_kontakt"].mean() * 100), 1),
+            "helse_god": round(float(g16["helse_god"].mean() * 100), 1),
+            "tilb_stemme": round(float(g16["tilb_stemme"].mean()), 1),
+            "tilb_protest": round(float(g16["tilb_protest"].mean()), 1),
         })
     kommuner.sort(key=lambda k: k["navn"])
 

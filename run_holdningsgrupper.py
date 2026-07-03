@@ -41,6 +41,8 @@ def main() -> None:
         df["personlighetstype"] = pd.Categorical.from_codes(
             koder, categories=TYPER)
     df = LivssynModell(ssb).tildel(df, seed=args.seed + 30)
+    from kopi.helse import HelseModell
+    df = HelseModell(ess=ess).tildel(df, seed=args.seed + 35)
     df = TillitVerdiModell(ssb).tildel(df, seed=args.seed + 40)
     df = tildel_holdning(df, seed=args.seed)
     df.to_parquet(args.fil, index=False)

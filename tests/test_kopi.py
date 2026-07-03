@@ -303,6 +303,43 @@ def test_personlighet_ess_tilt():
     assert abs(n_barn - 0.30) < 0.04
 
 
+def test_helse_offline():
+    import pandas as pd
+    from kopi.helse import HelseModell, _KPR_BAND, _PSYKISK, _MUSKEL
+    m = HelseModell.__new__(HelseModell)
+    m.rater = {_PSYKISK: np.array([[80, 150, 160, 150, 140, 150],
+                                   [90, 260, 260, 220, 180, 190]], float),
+               _MUSKEL: np.full((2, len(_KPR_BAND)), 250.0)}
+    m.smr = {_PSYKISK: {"0301": 1.3, "1151": 0.7},
+             _MUSKEL: {"0301": 1.0, "1151": 1.0}}
+    m.levealder = {("0301", 0, "0"): 80.0, ("0301", 1, "0"): 84.0,
+                   ("1151", 0, "0"): 79.0, ("1151", 1, "0"): 83.0,
+                   ("03", 0, "0"): 80.0, ("03", 0, "1"): 76.0, ("03", 0, "3"): 83.0,
+                   ("0", 0, "0"): 79.5, ("0", 1, "0"): 83.5}
+    m.ess_helse = {"basis": [[0.85, 0.8, 0.75, 0.65], [0.8, 0.78, 0.7, 0.55]],
+                   "inntektsdesil": [-0.2, -0.1, -0.05, 0, 0, 0.02, 0.04, 0.08, 0.12, 0.12],
+                   "utdanning": {"0": -0.1, "1": 0.0, "2": 0.03, "3": 0.12}}
+    df = _syntetisk_kopi()
+    a = m.tildel(df, seed=2)
+    b = m.tildel(df, seed=2)
+    assert a["psykisk_kontakt"].equals(b["psykisk_kontakt"])
+    # Målt kommunenivå (SMR) skal slå gjennom.
+    kom = a[a["alder"] >= 16].groupby("kommune", observed=True)
+    assert (kom["psykisk_kontakt"].mean()["0301"]
+            > kom["psykisk_kontakt"].mean()["1151"] + 0.02)
+    # Fylkesgradienten på levealder: uni over grunnskole for Oslo-menn.
+    o = a[(a["kommune"] == "0301") & (a["kjonn"] == "mann")]
+    assert (o[o["utdanning"] == "uni_lang"]["forventet_levealder"].mean()
+            > o[o["utdanning"] == "grunnskole"]["forventet_levealder"].mean() + 3)
+    # Egenvurdert helse: målt inntektsgradient.
+    v = a[(a["alder"] >= 25) & a["brutto_inntekt"].notna()].copy()
+    import pandas as pd2
+    lav = v[v["brutto_inntekt"] < v["brutto_inntekt"].quantile(0.2)]
+    hoy = v[v["brutto_inntekt"] > v["brutto_inntekt"].quantile(0.8)]
+    assert (hoy["helse_god"].astype("float").mean()
+            > lav["helse_god"].astype("float").mean() + 0.1)
+
+
 if __name__ == "__main__":
     test_personlighet_gyldige_koder_og_deterministisk()
     test_personlighet_kjonnstilt_paa_tf()
@@ -319,4 +356,5 @@ if __name__ == "__main__":
     test_hovedgruppe_dekker_alle_grupper()
     test_tilboyeligheter_offline()
     test_personlighet_ess_tilt()
+    test_helse_offline()
     print("\nAlle kopi-tester grønne.")

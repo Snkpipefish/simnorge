@@ -48,6 +48,13 @@ aldersgradienten (08921) og velgerundersøkelsens utdanning–parti-sammenheng
 (13555). Livssynslaget (`kopi/livssyn.py`) trekker Dnk-medlemskap fra
 kommunens **faktiske** medlemsrate (KOSTRA 12025, antatt aldersgradient).
 
+Helselaget (`kopi/helse.py`) bruker **FHIs åpne API** (Folkehelsestatistikk,
+statistikk-data.fhi.no): kontakt med primærhelsetjenesten for psykiske
+plager og muskel/skjelett (målt rate per kjønn × alder × kommunens
+standardiserte nivå, KPR tabell 369) og **forventet levealder** per
+kommune × kjønn med fylkets målte utdanningsgradient (660 + 507). I tillegg
+egenvurdert helse fra ESS med målt inntekts- og utdanningsgradient.
+
 Tillit/verdi-laget (`kopi/tillit_verdi.py`) gir aksen **institusjonstillit**
 fra velgerundersøkelsens målte tillit til Stortinget etter alder ×
 stemt/ikke stemt × utdanning (13908), og aksen **verdiliberal** (antakelse:

@@ -204,7 +204,43 @@ def beregn_posisjoner(csv: Path = CSV) -> dict:
     ut["oko_inntektsdesil"] = verdier
 
     ut["personlighet"] = beregn_personlighet(df, parti)
+    ut["helse"] = beregn_helse(df)
     return ut
+
+
+def beregn_helse(df: pd.DataFrame) -> dict:
+    """MÅLT egenvurdert helse (health: 1 svært god .. 5 svært dårlig).
+    P(god helse) = andel <= 2, per kjønn × aldersbånd, pluss målte
+    prosentpoeng-avvik per inntektsdesil og utdanningsnivå."""
+    god = (_gyldig(df["health"], 5) <= 2).where(df["health"].le(5))
+    w = df["anweight"]
+    kjonn = df["gndr"]                      # 1 mann, 2 kvinne
+    band = pd.cut(df["agea"], [15, 24, 44, 66, 200], labels=range(4))
+
+    basis = np.zeros((2, 4))
+    for si, kj in enumerate([1, 2]):
+        for ai in range(4):
+            m = (kjonn == kj) & (band == ai)
+            mu, _, n = _vektet(god[m].astype(float), w[m])
+            basis[si, ai] = round(mu, 3) if n >= 20 else np.nan
+    basis = pd.DataFrame(basis).ffill(axis=1).bfill(axis=1).to_numpy()
+
+    mu_n, _, _ = _vektet(god.astype(float), w)
+    desil = _gyldig(df["hinctnta"], 10)
+    dp_desil = []
+    for d in range(1, 11):
+        mu, _, n = _vektet(god[desil == d].astype(float), w[desil == d])
+        dp_desil.append(round((mu - mu_n), 3) if n >= 20 else None)
+    dp_desil = pd.Series(dp_desil, dtype="float").interpolate(
+        limit_direction="both").fillna(0.0).round(3).tolist()
+
+    utd = _gyldig(df["eisced"], 7).map(_EISCED_TIL_NIVAA)
+    dp_utd = {}
+    for i in range(4):
+        mu, _, n = _vektet(god[utd == i].astype(float), w[utd == i])
+        dp_utd[str(i)] = round(mu - mu_n, 3) if n >= 20 else 0.0
+    return {"basis": np.round(basis, 3).tolist(),
+            "inntektsdesil": dp_desil, "utdanning": dp_utd}
 
 
 def skriv_posisjoner(csv: Path = CSV) -> dict:
