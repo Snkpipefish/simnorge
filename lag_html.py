@@ -95,8 +95,11 @@ def main() -> None:
     html = mal.replace("__DATA__", json.dumps(data, ensure_ascii=False,
                                               separators=(",", ":")))
     Path("kopi_norge.html").write_text(html, encoding="utf-8")
-    print(f"Skrev kopi_norge.html ({len(html) / 1e6:.1f} MB) — "
-          f"{len(kommuner)} kommuner, {len(grupper)} grupper.")
+    # Publiseringskopi for GitHub Pages (docs/ på main).
+    Path("docs").mkdir(exist_ok=True)
+    Path("docs/index.html").write_text(html, encoding="utf-8")
+    print(f"Skrev kopi_norge.html + docs/index.html ({len(html) / 1e6:.1f} MB)"
+          f" — {len(kommuner)} kommuner, {len(grupper)} grupper.")
 
 
 if __name__ == "__main__":
