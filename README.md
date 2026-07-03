@@ -6,6 +6,75 @@ representativt vektet svar for hele landet eller én kommune. Inspirert av
 [Sim Francisco](https://github.com/tejasprabhune/simfrancisco).
 `PLAN.md` er kilde til sannhet for design og metodikk.
 
+> **Status 2026-07-03:** LLM-pipelinen (Modul 3–8) er avsluttet — se
+> `RAPPORT.md` for post mortem med tall. Aktivt spor er nå **kopien på
+> individnivå** under.
+
+## KOPI — Norge på individnivå (aktivt spor)
+
+`kopi/` bygger en syntetisk kopi av hele Norges befolkning: én rad per bosatt
+innbygger (~5,63 mill) med kommune, kjønn, alder, bruttoinntekt,
+personlighetstype (16 typer) og stemmegivning ved stortingsvalget 2025.
+
+```bash
+.venv/bin/python run_kopi.py                 # hele landet -> kopi_norge.parquet
+.venv/bin/python run_holdningsgrupper.py     # + holdningsakser og holdningsgruppe
+.venv/bin/python -m tests.test_kopi          # tester (offline)
+```
+
+Ærlighetsregime per kolonne: befolkning (07459) og valgresultat per kommune
+(08092) er **ekte tall** — kommuneaggregatet av simulerte stemmer matcher det
+faktiske resultatet (verifiseres ved hver bygging). Deltakelse (13085) og
+demografisk stemmetilt (13698) er **målte gradienter**. Inntekt trekkes fra
+SSBs **faktiske fordeling** (06655) med en antatt kommuneskala (06944).
+Personlighetstypene har **antatte basissatser** (kjønn/alder, dokumentert i
+`kopi/personlighet.py`). Med ESS-mikrodata (se under) tiltes bokstav-
+sannsynlighetene i tillegg av **målte** gruppeforskjeller i inntekt,
+utdanning og parti (Schwartz-verdier + sosial aktivitet som proxy —
+koblingen komposit→bokstav er antakelse, gradientene er målte). Uten ESS
+er typene uavhengige av inntekt/parti — vi fabrikkerer ikke korrelasjoner
+uten kilde.
+
+Kriminalitetslaget (`kopi/kriminalitet.py`) trekker per person tre flagg fra
+**målte rater**: utsatt for vold/trusler og tyveri/skadeverk (04621, kjønn ×
+alder, skalert med kommunens faktiske anmeldelsesnivå fra 08487) og siktet
+for vold (11453). Av dette bygges aksen **trygghet** (målte ingredienser,
+antatte vekter).
+
+Utdanningslaget (`kopi/utdanning.py`) gir hver person 16+ ett av fire
+utdanningsnivåer fra tre **målte** kilder: kommunens faktiske fordeling per
+kjønn (09429, hard marginal som holdes eksakt via raking), den nasjonale
+aldersgradienten (08921) og velgerundersøkelsens utdanning–parti-sammenheng
+(13555). Livssynslaget (`kopi/livssyn.py`) trekker Dnk-medlemskap fra
+kommunens **faktiske** medlemsrate (KOSTRA 12025, antatt aldersgradient).
+
+Tillit/verdi-laget (`kopi/tillit_verdi.py`) gir aksen **institusjonstillit**
+fra velgerundersøkelsens målte tillit til Stortinget etter alder ×
+stemt/ikke stemt × utdanning (13908), og aksen **verdiliberal** (antakelse:
+parti + kirkemedlemskap + alder + utdanning).
+
+Tilbøyelighetslaget (`kopi/tilboyelighet.py`, kjøres med
+`run_tilboyeligheter.py`) gir fem skårer 0–100 per person 16+: stemme
+(målt: 10440 deltakelse etter alder × utdanning + vane/tillit), flytte
+(målt: 05540 per kjønn × alder), frivillig innsats (målt basis 13826 +
+antatte tillegg), protest og risiko (rene antakelser fra egne kolonner).
+
+Holdningslaget (`kopi/holdning.py`) gir hver person 16+ skårer på sju akser
+(økonomisk fordeling, innvandring, klima, sentrum–distrikt, trygghet,
+institusjonstillit, verdiliberal) og en av **20 holdningsgrupper** (rullet
+opp i 5 hovedgrupper). Gruppeprototypene står samlet i den fila og kan
+justeres på ett sted.
+
+**ESS-forankring** (`kopi/ess.py`): med European Social Survey-mikrodata
+(runde 10+11, norsk utvalg, lastes ned gratis fra ess.sikt.no til
+`data/ess/`) erstattes de *antatte* partiposisjonene med **målte**: posisjon
+og spredning innen hvert parti på økonomi/innvandring/klima, målt
+inntektsgradient, målte tillits- og verdiposisjoner (inkl. hjemmesittere),
+og gruppeprototyper ankret i partienes målte posisjon. Kjør
+`.venv/bin/python -m kopi.ess` for å (re)bygge aggregatene
+(`kopi/ess_posisjoner.json`); uten dem gjelder de dokumenterte antakelsene.
+Kun sentrum–distrikt-aksen forblir antakelse (ESS mangler mål for den).
+
 ## Kom i gang
 
 ```bash

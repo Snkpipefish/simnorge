@@ -4,8 +4,22 @@
     {
       "name": "sporretab",
       "runtimeExecutable": ".venv/bin/python",
-      "runtimeArgs": ["-m", "app.server", "8765"],
+      "runtimeArgs": [
+        "-m",
+        "app.server",
+        "8765"
+      ],
       "port": 8765
+    },
+    {
+      "name": "kopi-oversikt",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8788"
+      ],
+      "port": 8788
     }
   ]
 }

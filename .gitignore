@@ -12,3 +12,9 @@ __pycache__/
 # OS / editor
 .DS_Store
 *.swp
+
+# ESS-mikrodata: registreringspliktig, skal ikke i git (aggregatene i kopi/ess_posisjoner.json er OK)
+data/ess/
+ESS*-subset.zip
+kopi_norge.parquet
+kopi_norge.html

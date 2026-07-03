@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimNorge — syntetisk kopi av Norge</title>
+<style>
+:root { --bg:#15161a; --flate:#1e2027; --flate2:#262933; --kant:#33363f;
+  --tekst:#e8e9ec; --tekst2:#a5a8b3; --rod:#d64550; --bla:#4a86e8;
+  --gronn:#3aa76d; --gul:#cf9236; --gra:#8a8f98; }
+* { box-sizing:border-box; margin:0; }
+body { background:var(--bg); color:var(--tekst);
+  font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; padding:24px; }
+main { max-width:1200px; margin:0 auto; }
+h1 { font-size:26px; font-weight:600; }
+h2 { font-size:19px; font-weight:600; margin:36px 0 12px; }
+.sub { color:var(--tekst2); font-size:13.5px; margin:4px 0 20px; }
+.kort { display:flex; flex-wrap:wrap; gap:12px; margin:16px 0; }
+.kort div { background:var(--flate); border:1px solid var(--kant);
+  border-radius:10px; padding:12px 18px; min-width:130px; }
+.kort b { display:block; font-size:22px; font-weight:600; }
+.kort span { color:var(--tekst2); font-size:12.5px; }
+#graf { position:relative; height:620px; background:var(--flate);
+  border:1px solid var(--kant); border-radius:12px; overflow:hidden; }
+#graf canvas { display:block; cursor:grab; }
+#tip { position:absolute; display:none; pointer-events:none;
+  background:var(--flate2); border:1px solid var(--kant); border-radius:8px;
+  padding:10px 12px; font-size:12.5px; line-height:1.55; max-width:240px; }
+#legend { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:10px;
+  font-size:12.5px; color:var(--tekst2); }
+.dot { width:10px; height:10px; border-radius:50%; display:inline-block;
+  margin-right:6px; vertical-align:-1px; }
+table { border-collapse:collapse; width:100%; font-size:13px; }
+th, td { padding:7px 10px; text-align:right; border-bottom:1px solid var(--kant);
+  white-space:nowrap; }
+th:first-child, td:first-child { text-align:left; }
+th { color:var(--tekst2); font-weight:500; cursor:pointer; user-select:none;
+  position:sticky; top:0; background:var(--bg); }
+tbody tr:hover { background:var(--flate); }
+.tabellboks { overflow-x:auto; border:1px solid var(--kant); border-radius:10px; }
+select, input { background:var(--flate2); color:var(--tekst);
+  border:1px solid var(--kant); border-radius:8px; padding:8px 12px;
+  font-size:14px; }
+.bar { height:16px; border-radius:3px; background:var(--bla); }
+.barrad { display:grid; grid-template-columns:110px 1fr 52px; gap:10px;
+  align-items:center; margin:4px 0; font-size:13px; }
+.barrad .verdi { text-align:right; color:var(--tekst2); }
+.to { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+@media (max-width:800px){ .to { grid-template-columns:1fr; } }
+.fotnote { color:var(--tekst2); font-size:12.5px; margin:40px 0 10px;
+  border-top:1px solid var(--kant); padding-top:16px; }
+</style>
+</head>
+<body>
+<main>
+<h1>SimNorge — syntetisk kopi av Norge</h1>
+<p class="sub">Én simulert person per bosatt innbygger. Befolkning, inntekt og valgresultat
+er ekte SSB-tall; personlighet og holdningsakser er dokumenterte antakelser.
+Kommuneresultatene ved stortingsvalget 2025 reproduseres eksakt.</p>
+<div class="kort" id="nokkel"></div>
+
+<h2>Holdningsgruppene som graf</h2>
+<p class="sub">Dra i nodene. Hold musen over for detaljer. Størrelse = antall personer.</p>
+<div id="graf"><canvas id="cv"></canvas><div id="tip"></div></div>
+<div id="legend"></div>
+
+<h2>Alle 20 holdningsgrupper</h2>
+<p class="sub">Klikk på en kolonneoverskrift for å sortere. Skårene 0–100; tilbøyeligheter er snitt for gruppen.</p>
+<div class="tabellboks" style="max-height:520px;overflow-y:auto;">
+<table id="gtab"><thead></thead><tbody></tbody></table>
+</div>
+
+<h2>Kommunevelger</h2>
+<div style="margin:10px 0;">
+<input id="ksok" list="kliste" placeholder="Skriv kommunenavn…" style="width:280px;">
+<datalist id="kliste"></datalist>
+</div>
+<div class="kort" id="knokkel"></div>
+<div class="to">
+<div><h2 style="font-size:16px;margin-top:12px;">Stortingsvalget 2025 (faktisk resultat)</h2><div id="kparti"></div></div>
+<div><h2 style="font-size:16px;margin-top:12px;">Største holdningsgrupper</h2><div id="kgrupper"></div>
+<h2 style="font-size:16px;">Aldersfordeling</h2><div id="kalder"></div></div>
+</div>
+
+<h2>Personlighetstyper nasjonalt</h2>
+<p class="sub">Ren antakelse: uavhengige bokstaver gitt kjønn og alder — med vilje ikke koblet til parti eller inntekt.</p>
+<div id="ptyper" class="to"></div>
+
+<p class="fotnote"><b>Kilder og ærlighet.</b> Målt (SSB): befolkning 07459, inntekt 06655/06944,
+valg 08092/13085/13698, utdanning 09429/08921/13555, kirkemedlemskap 12025,
+kriminalitet 04621/08487/11453, tillit 13908, deltakelse 10440, flytting 05540,
+frivillighet 13826. Antatt (dokumentert i koden): personlighetstyper,
+verdiliberal-aksen, gruppeprototypene, og sammenveiingene av målte ingredienser.
+Generert av lag_html.py fra kopi_norge.parquet.</p>
+</main>
+<script>
+var D = __DATA__;
+var FARGE = {"venstresiden":"#d64550","høyresiden":"#4a86e8","grønne og liberale":"#3aa76d","sentrum og tradisjon":"#cf9236","midten":"#8a8f98"};
+var PFARGE = {"Ap":"#e0303e","Høyre":"#87add7","FrP":"#005799","Sp":"#a5cd39","SV":"#eb4040","Rødt":"#da291c","Venstre":"#00807b","MDG":"#6a9325","KrF":"#ffbe00","Andre":"#8a8f98"};
+function fmt(n){ return n.toLocaleString('nb-NO'); }
+
+var nk = document.getElementById('nokkel');
+[[fmt(D.nasjonal.total),'innbyggere simulert'],[fmt(D.nasjonal.kommuner),'kommuner'],
+ [fmt(D.nasjonal.velgere),'velgere 2025'],
+ [fmt(D.nasjonal.inntekt.mann)+' kr','medianinntekt menn 17+'],
+ [fmt(D.nasjonal.inntekt.kvinne)+' kr','medianinntekt kvinner 17+'],
+ [D.nasjonal.utsatt_vold+' %','utsatt for vold/trusler'],
+ [D.nasjonal.dnk+' %','medlem Den norske kirke']]
+.forEach(function(p){ var d=document.createElement('div');
+  d.innerHTML='<b>'+p[0]+'</b><span>'+p[1]+'</span>'; nk.appendChild(d); });
+
+(function(){
+var wrap=document.getElementById('graf'), cv=document.getElementById('cv'),
+    tip=document.getElementById('tip'), ctx=cv.getContext('2d');
+var W=900,H=620,DPR=Math.min(devicePixelRatio||1,2),TOT=0;
+D.grupper.forEach(function(g){TOT+=g.n;});
+function mal(){ W=Math.max(wrap.clientWidth,320); H=wrap.clientHeight;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+'px'; cv.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0); }
+mal();
+var noder=[],lenker=[];
+D.hovedliste.forEach(function(h,i){
+  var a=-Math.PI/2+i*2*Math.PI/5, nh=0;
+  D.grupper.forEach(function(g){ if(g.hoved===h) nh+=g.n; });
+  noder.push({id:h,hub:true,hoved:h,n:nh,r:14+Math.sqrt(nh)/38,
+    x:W/2+Math.cos(a)*W*0.28,y:H/2+Math.sin(a)*H*0.28});
+});
+D.grupper.forEach(function(g,gi){
+  var hi=D.hovedliste.indexOf(g.hoved),hub=noder[hi],a=(gi*2.399)%(6.2832);
+  noder.push(Object.assign({},g,{hub:false,r:Math.max(6,Math.sqrt(g.n)/34),
+    x:hub.x+Math.cos(a)*110,y:hub.y+Math.sin(a)*110}));
+  lenker.push({a:hi,b:noder.length-1,svak:false});
+});
+for(var i=0;i<5;i++) for(var j=i+1;j<5;j++) lenker.push({a:i,b:j,svak:true});
+var drag=null,hover=null,mx=0,my=0,varme=1;
+function steg(){
+  var i,j,a,b,dx,dy,d,f,ring=Math.min(W,H)*0.52,medl=46+Math.min(W,H)*0.02;
+  for(i=0;i<noder.length;i++) for(j=i+1;j<noder.length;j++){
+    a=noder[i];b=noder[j];dx=b.x-a.x;dy=b.y-a.y;
+    var d2=dx*dx+dy*dy+40;d=Math.sqrt(d2);
+    f=2600*((a.r+b.r)/44)/d2;dx/=d;dy/=d;
+    a.x-=dx*f;a.y-=dy*f;b.x+=dx*f;b.y+=dy*f;}
+  lenker.forEach(function(l){a=noder[l.a];b=noder[l.b];
+    dx=b.x-a.x;dy=b.y-a.y;d=Math.sqrt(dx*dx+dy*dy)||1;
+    var hvile=l.svak?ring:a.r+b.r+medl,k=l.svak?0.003:0.028;
+    f=k*(d-hvile)/d;a.x+=dx*f;a.y+=dy*f;b.x-=dx*f;b.y-=dy*f;});
+  noder.forEach(function(n){
+    n.x+=(W/2-n.x)*(n.hub?0.0035:0.001);n.y+=(H/2-n.y)*(n.hub?0.0035:0.001);
+    n.x+=(Math.random()-0.5)*varme*0.6;n.y+=(Math.random()-0.5)*varme*0.6;
+    n.x=Math.max(n.r+6,Math.min(W-n.r-6,n.x));
+    n.y=Math.max(n.r+18,Math.min(H-n.r-18,n.y));});
+  if(drag){drag.x=mx;drag.y=my;}
+  varme=Math.max(0.05,varme*0.995);
+}
+function tegn(){
+  ctx.clearRect(0,0,W,H);
+  var nab={};
+  if(hover) lenker.forEach(function(l){ if(!l.svak){
+    if(noder[l.a]===hover) nab[l.b]=1; if(noder[l.b]===hover) nab[l.a]=1; }});
+  lenker.forEach(function(l){
+    var a=noder[l.a],b=noder[l.b],aktiv=hover&&!l.svak&&(a===hover||b===hover);
+    ctx.strokeStyle='#4a4e59';
+    ctx.globalAlpha=l.svak?0.15:(hover?(aktiv?0.95:0.15):0.5);
+    ctx.lineWidth=aktiv?1.6:1;
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();});
+  noder.forEach(function(n,i){
+    var dim=hover&&n!==hover&&!nab[i];
+    ctx.globalAlpha=dim?0.22:1;ctx.fillStyle=FARGE[n.hoved];
+    ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,6.2832);ctx.fill();
+    if(n.hub){ctx.globalAlpha=dim?0.15:0.5;ctx.strokeStyle=FARGE[n.hoved];
+      ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(n.x,n.y,n.r+3.5,0,6.2832);ctx.stroke();}
+    ctx.globalAlpha=dim?0.15:0.95;
+    ctx.fillStyle=n.hub?'#e8e9ec':'#a5a8b3';
+    ctx.font=(n.hub?'600 12px ':'400 11px ')+'system-ui,sans-serif';
+    ctx.textAlign='center';ctx.fillText(n.id,n.x,n.y+n.r+13);});
+  ctx.globalAlpha=1;
+}
+(function loop(){steg();tegn();requestAnimationFrame(loop);})();
+function finn(x,y){var best=null,bd=1e9;
+  noder.forEach(function(n){var d=Math.hypot(n.x-x,n.y-y);
+    if(d<n.r+6&&d<bd){best=n;bd=d;}});return best;}
+function pos(e){var r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top];}
+cv.addEventListener('pointerdown',function(e){var p=pos(e);mx=p[0];my=p[1];
+  drag=finn(mx,my);if(drag){cv.setPointerCapture(e.pointerId);
+  cv.style.cursor='grabbing';varme=Math.max(varme,0.4);}});
+cv.addEventListener('pointermove',function(e){var p=pos(e);mx=p[0];my=p[1];
+  if(drag)return;hover=finn(mx,my);
+  if(hover){var g=hover,h;
+    if(g.hub){h='<b>'+g.id+'</b><br>'+fmt(g.n)+' personer ('+Math.round(g.n/TOT*100)+' % av 16+)';}
+    else{h='<b>'+g.id+'</b><br><span style="color:#a5a8b3">'+g.hoved+'</span><br>'
+      +fmt(g.n)+' personer ('+(g.n/TOT*100).toFixed(1)+' %)<br>'
+      +'Største parti: '+g.parti+'<br>Medianinntekt: '+g.inntekt+' 000 kr<br>'
+      +'Medianalder: '+g.alder+' år<br>Trygghet '+g.trygghet+' · tillit '+g.tillit
+      +' · verdi '+g.verdi+'<br>Medlem Dnk: '+g.dnk+' %<br>'
+      +'Stemme '+Math.round(g.tilb_stemme)+' · protest '+Math.round(g.tilb_protest)
+      +' · frivillig '+Math.round(g.tilb_frivillig);}
+    tip.innerHTML=h;tip.style.display='block';
+    tip.style.left=Math.min(mx+16,W-250)+'px';
+    tip.style.top=Math.min(my+12,H-180)+'px';cv.style.cursor='pointer';
+  } else {tip.style.display='none';cv.style.cursor='grab';}});
+cv.addEventListener('pointerup',function(){drag=null;cv.style.cursor='grab';});
+cv.addEventListener('pointerleave',function(){hover=null;drag=null;tip.style.display='none';});
+if(window.ResizeObserver) new ResizeObserver(function(){mal();varme=Math.max(varme,0.5);}).observe(wrap);
+var leg=document.getElementById('legend');
+D.hovedliste.forEach(function(h){
+  var nh=0;D.grupper.forEach(function(g){if(g.hoved===h)nh+=g.n;});
+  var el=document.createElement('span');
+  el.innerHTML='<span class="dot" style="background:'+FARGE[h]+'"></span>'+h+' — '+Math.round(nh/TOT*100)+' %';
+  leg.appendChild(el);});
+})();
+
+(function(){
+var kol=[["id","Gruppe"],["hoved","Hovedgruppe"],["n","Antall"],["parti","Største parti"],
+  ["inntekt","Inntekt (1000)"],["alder","Alder"],["trygghet","Trygghet"],["tillit","Tillit"],
+  ["verdi","Verdi"],["dnk","Dnk %"],["tilb_stemme","Stemme"],["tilb_flytte","Flytte"],
+  ["tilb_frivillig","Frivillig"],["tilb_protest","Protest"],["tilb_risiko","Risiko"]];
+var thead=document.querySelector('#gtab thead'),tbody=document.querySelector('#gtab tbody');
+var tr=document.createElement('tr');
+kol.forEach(function(k,i){var th=document.createElement('th');th.textContent=k[1];
+  th.onclick=function(){sorter(k[0]);};tr.appendChild(th);});
+thead.appendChild(tr);
+var retning=-1,sist='';
+function sorter(felt){
+  if(felt===sist)retning*=-1;else{retning=-1;sist=felt;}
+  var rader=D.grupper.slice().sort(function(a,b){
+    var x=a[felt],y=b[felt];
+    if(typeof x==='string')return retning*x.localeCompare(y,'nb');
+    return retning*(x-y);});
+  tbody.innerHTML='';
+  rader.forEach(function(g){
+    var tr=document.createElement('tr');
+    kol.forEach(function(k){
+      var td=document.createElement('td');
+      var v=g[k[0]];
+      if(k[0]==='id'){td.innerHTML='<span class="dot" style="background:'+FARGE[g.hoved]+'"></span>'+v;}
+      else if(k[0]==='n'){td.textContent=fmt(v);}
+      else{td.textContent=v;}
+      tr.appendChild(td);});
+    tbody.appendChild(tr);});
+}
+sorter('n');retning=-1;
+})();
+
+(function(){
+var sok=document.getElementById('ksok'),liste=document.getElementById('kliste');
+D.kommuner.forEach(function(k){var o=document.createElement('option');
+  o.value=k.navn;liste.appendChild(o);});
+function bar(el,navn,verdi,maks,farge){
+  var r=document.createElement('div');r.className='barrad';
+  r.innerHTML='<span>'+navn+'</span><div><div class="bar" style="width:'
+    +Math.max(1,verdi/maks*100)+'%;background:'+(farge||'#4a86e8')+'"></div></div>'
+    +'<span class="verdi">'+verdi+(farge?' %':'')+'</span>';
+  el.appendChild(r);}
+function vis(navn){
+  var k=null;D.kommuner.forEach(function(x){if(x.navn===navn)k=x;});
+  if(!k)return;
+  var nk=document.getElementById('knokkel');nk.innerHTML='';
+  [[fmt(k.n),'innbyggere'],[k.inntekt+' 000 kr','medianinntekt 17+'],
+   [k.deltakelse+' %','valgdeltakelse 18+'],[k.trygghet,'trygghet (snitt)'],
+   [k.tillit,'tillit (snitt)'],[k.dnk+' %','medlem Dnk']]
+  .forEach(function(p){var d=document.createElement('div');
+    d.innerHTML='<b>'+p[0]+'</b><span>'+p[1]+'</span>';nk.appendChild(d);});
+  var kp=document.getElementById('kparti');kp.innerHTML='';
+  var par=Object.keys(k.parti).sort(function(a,b){return k.parti[b]-k.parti[a];});
+  var maks=k.parti[par[0]]||1;
+  par.forEach(function(p){bar(kp,p,k.parti[p],maks,PFARGE[p]||'#8a8f98');});
+  var kg=document.getElementById('kgrupper');kg.innerHTML='';
+  var gmaks=k.grupper.length?k.grupper[0][1]:1;
+  k.grupper.forEach(function(g){
+    var hoved='midten';D.grupper.forEach(function(x){if(x.id===g[0])hoved=x.hoved;});
+    bar(kg,g[0],g[1],gmaks,FARGE[hoved]);});
+  var ka=document.getElementById('kalder');ka.innerHTML='';
+  var etiketter=['0-9','10-19','20-29','30-39','40-49','50-59','60-69','70-79','80-89','90-99','100+'];
+  var amaks=Math.max.apply(null,k.alder)||1;
+  k.alder.forEach(function(n,i){
+    if(i>=etiketter.length)return;
+    var r=document.createElement('div');r.className='barrad';
+    r.innerHTML='<span>'+etiketter[i]+'</span><div><div class="bar" style="width:'
+      +Math.max(0.5,n/amaks*100)+'%;background:#6a7280"></div></div>'
+      +'<span class="verdi">'+fmt(n)+'</span>';
+    ka.appendChild(r);});
+}
+sok.addEventListener('change',function(){vis(sok.value);});
+vis('Oslo - Oslove');sok.value='Oslo - Oslove';
+})();
+
+(function(){
+var el=document.getElementById('ptyper');
+var typer=Object.keys(D.nasjonal.personlighet);
+var halv=Math.ceil(typer.length/2);
+[typer.slice(0,halv),typer.slice(halv)].forEach(function(del){
+  var boks=document.createElement('div');
+  var maks=D.nasjonal.personlighet[typer[0]];
+  del.forEach(function(t){
+    var v=D.nasjonal.personlighet[t];
+    var r=document.createElement('div');r.className='barrad';
+    r.innerHTML='<span style="font-family:ui-monospace,monospace">'+t
+      +'</span><div><div class="bar" style="width:'+(v/maks*100)
+      +'%;background:#7d6bb5"></div></div><span class="verdi">'+v+' %</span>';
+    boks.appendChild(r);});
+  el.appendChild(boks);});
+})();
+</script>
+</body>
+</html>
