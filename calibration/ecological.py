@@ -56,11 +56,17 @@ GEO_FEATURES = ["sentral", "mellomsentral", "distrikt", "inntektsratio", "lavinn
 # --------------------------------------------------------------------------- #
 # Cellevekter og geo-features per kommune                                      #
 # --------------------------------------------------------------------------- #
-def cell_weights(ssb: SSBClient, kommune: str, *, year: str) -> np.ndarray | None:
+def cell_weights(ssb: SSBClient, kommune: str, *, year: str,
+                 turnout: dict[tuple[str, str], float] | None = None) -> np.ndarray | None:
     """IPF-fellesfordelingen som normaliserte vekter i det felles 144-cellerommet.
 
     Fraksjonell (ingen integerisering/personekspansjon) — vi trenger andeler,
     ikke individer. None hvis kommunen mangler kritiske marginer (logget der).
+
+    ``turnout``: valgfri (kjønn, utdanning) -> P(stemmer) fra 13360 (byggeåret —
+    lekkasjedisiplin håndheves av kallende kode). Valgresultatet er en
+    deltakelsesvektet sum av cellene, så vektene bør være det også: uten dette
+    må δ-stereotypene selv absorbere at lavt utdannede møter sjeldnere opp.
     """
     km = build_marginals(ssb, kommune, year=year)
     if km.skipped or km.n_total <= 0:
@@ -79,7 +85,8 @@ def cell_weights(ssb: SSBClient, kommune: str, *, year: str) -> np.ndarray | Non
         for ai, a in enumerate(AGE_LABELS):
             for ei, e in enumerate(EDU_LABELS):
                 for ci, c in enumerate(econ_labels):
-                    w[CELL_INDEX[(s, a, e, c)]] = table[si, ai, ei, ci]
+                    t = turnout.get((s, e), 1.0) if turnout is not None else 1.0
+                    w[CELL_INDEX[(s, a, e, c)]] = table[si, ai, ei, ci] * t
     return w / w.sum()
 
 

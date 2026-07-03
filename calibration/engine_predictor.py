@@ -139,7 +139,12 @@ class EnginePredictor:
                  pop_year: str = "2024", granularity: str = "full",
                  communes: list[str] | None = None,
                  backend: LLMBackend | None = None, model: str = DEFAULT_MODEL,
-                 cache_dir: str | Path = ".cache/engine_party", max_workers: int = 8):
+                 cache_dir: str | Path = ".cache/engine_party", max_workers: int = 8,
+                 turnout_weighting: bool = False):
+        # turnout_weighting=False som standard: MÅLT (2021→2025, 8 kommuner) at
+        # eksplisitt 13360-vekting gjør motoren marginalt svakere (3.71→3.80 pp
+        # MAE geo_no_name) — LLM-ens celleanslag er allerede implisitt
+        # deltakelsesvektet, så vekting dobbelteller utdanningsgradienten.
         self.ssb, self.klass, self.items = ssb, klass, items
         self.variant = VARIANTS[variant]
         self.pop_year, self.granularity = pop_year, granularity
@@ -149,6 +154,7 @@ class EnginePredictor:
         self.cache_dir = Path(cache_dir) / self.variant.key
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.max_workers = max_workers
+        self.turnout_weighting = turnout_weighting
         self.name = f"engine_{self.variant.key}"
 
         self._polsys = next(i for i in items if i.column == "tillit_politisk_system")
@@ -208,6 +214,11 @@ class EnginePredictor:
 
     def __call__(self, fit_panel, target_kommunes, parties) -> pd.DataFrame:
         from population import build_status_mix
+        from .turnout import load_turnout, turnout_weight
+
+        # Deltakelse fra BYGGEÅRET (aldri målåret — lekkasjedisiplin).
+        # None -> uniform vekt (logget i turnout.py).
+        tlut = load_turnout(self.ssb, fit_panel.year) if self.turnout_weighting else None
 
         communes = [k for k in target_kommunes if self.communes is None or k in self.communes]
         # Bygg personas + statusmiks + kommunenavn.
@@ -250,7 +261,9 @@ class EnginePredictor:
                     d = dists.get(self._cellkey(k, persona, status))
                     if d is None:
                         continue
-                    w = persona.weight * share
+                    demo = persona.demographics
+                    w = (persona.weight * share
+                         * turnout_weight(tlut, demo["kjonn"], demo["utdanning"]))
                     for party in ENGINE_PARTIES:
                         agg[party] += w * d[party] / 100.0
                     W += w

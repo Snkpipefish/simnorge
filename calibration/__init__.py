@@ -12,6 +12,8 @@ from .baselines import (
 from .backtest import run_backtest
 from .engine_predictor import EnginePredictor, ENGINE_PARTIES, party_prompt, VARIANTS
 from .engine_backtest import run_variants_backtest, VariantsComparison
+from .turnout import load_turnout, turnout_weight
+from .correction import AffineCorrection, fit_correction, cv_corrected_mae
 
 __all__ = [
     "ElectionPanel", "load_election_panel", "municipality_code_set",
@@ -20,4 +22,6 @@ __all__ = [
     "run_backtest",
     "EnginePredictor", "ENGINE_PARTIES", "party_prompt", "VARIANTS",
     "run_variants_backtest", "VariantsComparison",
+    "load_turnout", "turnout_weight",
+    "AffineCorrection", "fit_correction", "cv_corrected_mae",
 ]

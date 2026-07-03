@@ -105,7 +105,7 @@ def run_variants_backtest(
     ssb: SSBClient, klass: KlassClient, items, *,
     build_year: str, target_year: str, communes: list[str],
     pop_year: str = "2024", granularity: str = "full", max_workers: int = 8,
-    variants: list[str] | None = None,
+    variants: list[str] | None = None, turnout_weighting: bool = False,
 ) -> VariantsComparison:
     variants = variants or list(VARIANTS)
     fit = load_election_panel(ssb, klass, build_year)
@@ -122,7 +122,8 @@ def run_variants_backtest(
 
     for v in variants:
         pred = EnginePredictor(ssb, klass, items, variant=v, pop_year=pop_year,
-                               granularity=granularity, communes=scored, max_workers=max_workers)
+                               granularity=granularity, communes=scored, max_workers=max_workers,
+                               turnout_weighting=turnout_weighting)
         long = pred(fit, scored, ENGINE_PARTIES)
         method_preds[f"engine_{v}"] = _wide(long.rename(columns={"pred_pct": "pct"}), "pct").reindex(actual.index)
         scale = ("celler×kommuner (full nasjonal DYR)" if VARIANTS[v].name

@@ -51,12 +51,16 @@ def main() -> None:
     all_codes = sorted(municipality_code_set(klass, "2024"))
     candidates = [k for k in all_codes if k in fit_panel.kommunes and k in test_panel.kommunes]
 
+    # Deltakelsesvekting fra BYGGEÅRET (13360). None -> uniform (logget).
+    from calibration.turnout import load_turnout
+    turnout = load_turnout(ssb, build)
+
     log.info("Bygger IPF-cellevekter for %d kommuner (pop %s) …", len(candidates), POP_YEAR)
     weights: dict[str, np.ndarray] = {}
     no_weights = []
     for i, k in enumerate(candidates):
         try:
-            w = cell_weights(ssb, k, year=POP_YEAR)
+            w = cell_weights(ssb, k, year=POP_YEAR, turnout=turnout)
         except Exception as e:  # noqa: BLE001 — én kommune skal ikke velte kjøringen
             log.warning("Kommune %s: cellevekter feilet (%s) — teller som tapt dekning.", k, e)
             w = None
