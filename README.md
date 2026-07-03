@@ -72,9 +72,14 @@ Første LLM-kjøring for en ny (spørsmål × geografi) tar ~1 min; deretter cac
 - **Valg-backtest 2021→2025** (8 prøvekommuner, 9-parti-basis): beste
   motorvariant (geo uten navn) MAE ≈ 3,7 pp mot persistence 3,9 pp — og
   navn-varianten er *svakere* enn geo-uten-navn, så gevinsten er resonnement,
-  ikke memorering. Med kommune-CV-lært affin korreksjon (`correction.py`)
-  faller MAE til ≈ 2,0 pp; korreksjonen viser at LLM-en systematisk demper
-  variasjon mot midten (b > 1 for de fleste partier).
+  ikke memorering. Affin korreksjon (`correction.py`) løfter motoren til
+  ≈ 2,0 pp og avdekker at LLM-en demper variasjon mot midten (b > 1).
+  **MEN — den rettferdige sammenlikningen:** samme korreksjon på persistence
+  gir **1,45 pp**. «Forrige valg + partivis sving» (pollofpolls-metoden, som
+  allerede finnes) slår altså hele LLM-motoren når begge korrigeres. For
+  valgprediksjon tilfører LLM-en per i dag negativ verdi mot enkleste
+  eksisterende metode; modellens eventuelle verdi ligger i frie spørsmål —
+  som er uvalidert.
 - **Korreksjonen gjelder KUN valg.** Den er lært på valgfasit og skal aldri
   brukes som skjult presisjon på frie spørsmål i spørretaben.
 - **Deltakelsesvekting (13360 + 13085)** dekker både utdannings- og alders-
