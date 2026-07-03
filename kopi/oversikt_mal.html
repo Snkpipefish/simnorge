@@ -46,10 +46,27 @@ select, input { background:var(--flate2); color:var(--tekst);
   align-items:center; margin:4px 0; font-size:13px; }
 .barrad .verdi { text-align:right; color:var(--tekst2); }
 .to { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
-#kommuneramme { border:1.5px solid rgba(74,134,232,0.6); border-radius:12px;
-  padding:16px 18px 20px; margin:12px 0 8px; }
-#kommuneramme .kort div { background:var(--flate2); }
 @media (max-width:800px){ .to { grid-template-columns:1fr; } }
+#nasjbar { display:flex; height:28px; border-radius:8px; overflow:hidden;
+  margin:14px 0 8px; }
+.chips { display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12.5px;
+  color:var(--tekst2); }
+#kartgrid { display:grid; grid-template-columns:360px 1fr; gap:20px;
+  align-items:start; margin:12px 0 8px; }
+#kartkol { max-width:420px; }
+@media (max-width:940px){ #kartgrid { grid-template-columns:1fr; } }
+#kartboks { position:relative; margin-top:10px; }
+#kart { display:block; width:100%; cursor:pointer; }
+#karttip { position:absolute; display:none; pointer-events:none;
+  background:var(--flate2); border:1px solid var(--kant); border-radius:8px;
+  padding:7px 10px; font-size:12.5px; line-height:1.5; max-width:200px; }
+#kartlegend { margin-top:8px; font-size:12px; color:var(--tekst2); }
+#kartlegend .grad { height:10px; border-radius:5px; }
+#kartlegend .ender { display:flex; justify-content:space-between; }
+#kartmetrikk { width:100%; }
+#kommuneramme { border:1.5px solid rgba(74,134,232,0.6); border-radius:12px;
+  padding:16px 18px 20px; }
+#kommuneramme .kort div { background:var(--flate2); }
 .fotnote { color:var(--tekst2); font-size:12.5px; margin:40px 0 10px;
   border-top:1px solid var(--kant); padding-top:16px; }
 .detalj td { background:var(--flate); font-size:12.5px; white-space:normal; }
@@ -73,21 +90,22 @@ select, input { background:var(--flate2); color:var(--tekst);
 <p class="sub">Én simulert person per bosatt innbygger. Befolkning, inntekt og valgresultat
 er ekte SSB-tall; personlighet og holdningsakser er dokumenterte antakelser.
 Kommuneresultatene ved stortingsvalget 2025 reproduseres eksakt.</p>
+
+<h2>Hele landet</h2>
 <div class="kort" id="nokkel"></div>
+<div id="nasjbar"></div>
+<div class="chips" id="nasjchips"></div>
+<p class="sub" style="margin-top:6px;">Stortingsvalget 2025, hele landet.</p>
 
-<h2>Holdningsgruppene som graf</h2>
-<p class="sub">Dra i nodene. Hold musen over for detaljer. Størrelse = antall personer.</p>
-<div id="graf"><canvas id="cv"></canvas><div id="tip"></div></div>
-<div id="legend"></div>
-
-<h2>Alle 20 holdningsgrupper</h2>
-<p class="sub">Klikk på en kolonneoverskrift for å sortere. Skårene 0–100; tilbøyeligheter er snitt for gruppen.</p>
-<div class="tabellboks" style="max-height:520px;overflow-y:auto;">
-<table id="gtab"><thead></thead><tbody></tbody></table>
+<h2>Kart og kommunevelger</h2>
+<p class="sub">Kartet farger alle kommuner etter målet du velger — hold over for verdi,
+klikk for å hente kommunen inn i den blå rammen. Alt innenfor rammen gjelder valgt kommune.</p>
+<div id="kartgrid">
+<div id="kartkol">
+<select id="kartmetrikk"></select>
+<div id="kartboks"><canvas id="kart"></canvas><div id="karttip"></div></div>
+<div id="kartlegend"></div>
 </div>
-
-<h2>Kommunevelger</h2>
-<p class="sub" style="margin-bottom:8px;">Alt innenfor rammen gjelder valgt kommune.</p>
 <section id="kommuneramme">
 <div style="margin:0 0 4px; position:relative; max-width:320px;">
 <input id="ksok" placeholder="Skriv kommunenavn…" autocomplete="off"
@@ -103,16 +121,18 @@ Kommuneresultatene ved stortingsvalget 2025 reproduseres eksakt.</p>
 <h2 style="font-size:16px;">Aldersfordeling</h2><div id="kalder"></div></div>
 </div>
 </section>
+</div>
 
-<h2>Helse</h2>
-<p class="sub">Målte FHI-rater (primærhelsekontakt, standardisert per kommune) og forventet levealder
-(kommunenivå + fylkets utdanningsgradient). Egenvurdert helse fra ESS med målt inntekts- og
-utdanningsgradient. Kommunetallene ligger i kommunevelgeren over.</p>
-<div class="kort" id="helsekort"></div>
+<h2>Holdningsgruppene som graf</h2>
+<p class="sub">Dra i nodene. Hold musen over for detaljer. Størrelse = antall personer.</p>
+<div id="graf"><canvas id="cv"></canvas><div id="tip"></div></div>
+<div id="legend"></div>
 
-<h2>Tilbøyeligheter per hovedgruppe</h2>
-<p class="sub">Snitt 0–100. Stemme/flytte/frivillig har målt basis; protest og risiko er antakelser fra egne kolonner.</p>
-<div class="tabellboks"><table id="tilbtab"><thead></thead><tbody></tbody></table></div>
+<h2>Alle 20 holdningsgrupper</h2>
+<p class="sub">Klikk på en kolonneoverskrift for å sortere. Skårene 0–100; tilbøyeligheter er snitt for gruppen.</p>
+<div class="tabellboks" style="max-height:520px;overflow-y:auto;">
+<table id="gtab"><thead></thead><tbody></tbody></table>
+</div>
 
 <h2>Personlighetsbokstavene mot inntekt og parti</h2>
 <p class="sub">Andel med hver bokstav (%). Gradientene er målt i ESS (Schwartz-verdier + sosial omgang);
@@ -140,8 +160,9 @@ på holdningsaksene, bostedsgradient per akse (innen parti) og landsdelsavvik
 gradienter (Schwartz + sosial omgang). Antatt (dokumentert i koden):
 personlighetsbasissatser, koblingen Schwartz→bokstav, partienes sentrum–
 distrikt-nivåer og EU-ankerets skala (geografien er målt), gruppeprototypenes
-avvik og sammenveiingene av målte ingredienser. Generert av lag_html.py fra
-kopi_norge.parquet.</p>
+avvik og sammenveiingene av målte ingredienser. Kartet: kommunegrenser
+(GeoJSON, 2024-inndelingen), forenklet og kvantisert for visning.
+Generert av lag_html.py fra kopi_norge.parquet.</p>
 </main>
 <script>
 var D = __DATA__;
@@ -149,15 +170,32 @@ var FARGE = {"venstresiden":"#d64550","høyresiden":"#4a86e8","grønne og libera
 var PFARGE = {"Ap":"#e0303e","Høyre":"#87add7","FrP":"#005799","Sp":"#a5cd39","SV":"#eb4040","Rødt":"#da291c","Venstre":"#00807b","MDG":"#6a9325","KrF":"#ffbe00","Andre":"#8a8f98"};
 function fmt(n){ return n.toLocaleString('nb-NO'); }
 
-var nk = document.getElementById('nokkel');
+(function(){
+var nk = document.getElementById('nokkel'), h = D.nasjonal.helse;
 [[fmt(D.nasjonal.total),'innbyggere simulert'],[fmt(D.nasjonal.kommuner),'kommuner'],
  [fmt(D.nasjonal.velgere),'velgere 2025'],
  [fmt(D.nasjonal.inntekt.mann)+' kr','medianinntekt menn 17+'],
  [fmt(D.nasjonal.inntekt.kvinne)+' kr','medianinntekt kvinner 17+'],
  [D.nasjonal.utsatt_vold+' %','utsatt for vold/trusler'],
- [D.nasjonal.dnk+' %','medlem Den norske kirke']]
+ [D.nasjonal.dnk+' %','medlem Den norske kirke'],
+ [h.levealder_menn+' år','forventet levealder menn'],
+ [h.levealder_kvinner+' år','forventet levealder kvinner'],
+ [h.psykisk+' %','psykisk helsekontakt siste år'],
+ [h.muskel+' %','muskel/skjelett-kontakt siste år'],
+ [h.helse_god+' %','god egenvurdert helse (16+)']]
 .forEach(function(p){ var d=document.createElement('div');
   d.innerHTML='<b>'+p[0]+'</b><span>'+p[1]+'</span>'; nk.appendChild(d); });
+
+var bar=document.getElementById('nasjbar'), chips=document.getElementById('nasjchips');
+var par=Object.keys(D.nasjonal.parti).sort(function(a,b){return D.nasjonal.parti[b]-D.nasjonal.parti[a];});
+par.forEach(function(p){ var v=D.nasjonal.parti[p]; if(!v)return;
+  var s=document.createElement('div');
+  s.style.cssText='flex:'+v+' 0 0;background:'+(PFARGE[p]||'#8a8f98');
+  s.title=p+' '+fmt(v)+' %'; bar.appendChild(s);
+  var c=document.createElement('span');
+  c.innerHTML='<span class="dot" style="background:'+(PFARGE[p]||'#8a8f98')+'"></span>'+p+' '+fmt(v)+' %';
+  chips.appendChild(c); });
+})();
 
 (function(){
 var wrap=document.getElementById('graf'), cv=document.getElementById('cv'),
@@ -225,7 +263,15 @@ function tegn(){
     ctx.textAlign='center';ctx.fillText(n.id,n.x,n.y+n.r+13);});
   ctx.globalAlpha=1;
 }
-(function loop(){steg();tegn();requestAnimationFrame(loop);})();
+var aktiv=false;
+function loop(){
+  steg();tegn();
+  if(varme>0.06||drag||kandidat)requestAnimationFrame(loop);
+  else aktiv=false;
+}
+function vekk(v){varme=Math.max(varme,v);
+  if(!aktiv){aktiv=true;requestAnimationFrame(loop);}}
+vekk(1);
 function finn(x,y){var best=null,bd=1e9;
   noder.forEach(function(n){var d=Math.hypot(n.x-x,n.y-y);
     if(d<n.r+6&&d<bd){best=n;bd=d;}});return best;}
@@ -248,7 +294,7 @@ var kandidat=null,startx=0,starty=0,dratt=false;
 cv.addEventListener('pointerdown',function(e){var p=pos(e);mx=p[0];my=p[1];
   startx=mx;starty=my;dratt=false;
   kandidat=finn(mx,my);
-  if(kandidat){cv.setPointerCapture(e.pointerId);varme=Math.max(varme,0.3);}});
+  if(kandidat){cv.setPointerCapture(e.pointerId);vekk(0.3);}});
 cv.addEventListener('pointermove',function(e){var p=pos(e);mx=p[0];my=p[1];
   if(kandidat&&!drag&&Math.hypot(mx-startx,my-starty)>8){
     drag=kandidat;cv.style.cursor='grabbing';tip.style.display='none';dratt=true;}
@@ -257,16 +303,18 @@ cv.addEventListener('pointermove',function(e){var p=pos(e);mx=p[0];my=p[1];
     hover=finn(mx,my);
     if(hover){visTip(hover,mx,my);cv.style.cursor='pointer';}
     else{tip.style.display='none';cv.style.cursor='grab';}
+    if(!aktiv)tegn();
   }});
 cv.addEventListener('pointerup',function(e){
   if(kandidat&&!dratt){                      // tap/klikk: vis eller skjul
     hover=kandidat;var p=pos(e);visTip(kandidat,p[0],p[1]);
   } else if(!kandidat){hover=null;tip.style.display='none';}
-  drag=null;kandidat=null;cv.style.cursor='grab';});
+  drag=null;kandidat=null;cv.style.cursor='grab';if(!aktiv)tegn();});
 cv.addEventListener('pointercancel',function(){drag=null;kandidat=null;});
 cv.addEventListener('pointerleave',function(e){
-  if(e.pointerType==='mouse'){hover=null;drag=null;kandidat=null;tip.style.display='none';}});
-if(window.ResizeObserver) new ResizeObserver(function(){mal();varme=Math.max(varme,0.5);}).observe(wrap);
+  if(e.pointerType==='mouse'){hover=null;drag=null;kandidat=null;
+    tip.style.display='none';if(!aktiv)tegn();}});
+if(window.ResizeObserver) new ResizeObserver(function(){mal();vekk(0.5);}).observe(wrap);
 var leg=document.getElementById('legend');
 D.hovedliste.forEach(function(h){
   var nh=0;D.grupper.forEach(function(g){if(g.hoved===h)nh+=g.n;});
@@ -324,6 +372,7 @@ sorter('n');retning=-1;
 
 (function(){
 var sok=document.getElementById('ksok'),forslag=document.getElementById('kforslag');
+var valgtKode=null, tegnKartHook=function(){};
 function bar(el,navn,verdi,maks,farge){
   var r=document.createElement('div');r.className='barrad';
   r.innerHTML='<span>'+navn+'</span><div><div class="bar" style="width:'
@@ -333,6 +382,7 @@ function bar(el,navn,verdi,maks,farge){
 function vis(navn){
   var k=null;D.kommuner.forEach(function(x){if(x.navn===navn)k=x;});
   if(!k)return;
+  valgtKode=k.kode;tegnKartHook();
   var nk=document.getElementById('knokkel');nk.innerHTML='';
   var kort=[[fmt(k.n),'innbyggere'],[k.inntekt+' 000 kr','medianinntekt 17+'],
    [k.deltakelse+' %','valgdeltakelse 18+'],[k.trygghet,'trygghet (snitt)'],
@@ -399,19 +449,163 @@ sok.addEventListener('keydown',function(e){
   if(e.key==='Enter'&&forslag.style.display==='block'&&forslag.firstChild){
     var navn=forslag.firstChild.textContent;
     sok.value=navn;forslag.style.display='none';vis(navn);}});
+
+if(D.geo){(function(){
+var G=D.geo;
+var KODE={};D.kommuner.forEach(function(k){KODE[k.kode]=k;});
+var feats=[],minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+G.kommuner.forEach(function(f){
+  var ringer=f.r.map(function(fl){
+    var a=[],x=0,y=0;
+    for(var i=0;i<fl.length;i+=2){x+=fl[i];y+=fl[i+1];a.push(x,y);
+      if(x<minx)minx=x;if(x>maxx)maxx=x;if(y<miny)miny=y;if(y>maxy)maxy=y;}
+    return a;});
+  feats.push({kode:f.k,ringer:ringer});});
+var idx={};feats.forEach(function(f,i){idx[f.kode]=i;});
+var COS=Math.cos((miny+maxy)/2*G.q*Math.PI/180);
+var boks=document.getElementById('kartboks'),kart=document.getElementById('kart'),
+    tip=document.getElementById('karttip'),ktx=kart.getContext('2d');
+var hit=document.createElement('canvas'),
+    htx=hit.getContext('2d',{willReadFrequently:true});
+var W=0,H=0,S=1,paths=[];
+function px(x){return (x-minx)*COS*S+3;}
+function py(y){return (maxy-y)*S+3;}
+function bygg(){
+  W=boks.clientWidth;if(W<40)return;
+  H=Math.round(W*(maxy-miny)/((maxx-minx)*COS));
+  var DPR=Math.min(devicePixelRatio||1,2);
+  kart.width=W*DPR;kart.height=H*DPR;kart.style.height=H+'px';
+  ktx.setTransform(DPR,0,0,DPR,0,0);
+  hit.width=W;hit.height=H;
+  S=Math.min((W-6)/((maxx-minx)*COS),(H-6)/(maxy-miny));
+  paths=feats.map(function(f){
+    var p=new Path2D();
+    f.ringer.forEach(function(a){
+      p.moveTo(px(a[0]),py(a[1]));
+      for(var i=2;i<a.length;i+=2)p.lineTo(px(a[i]),py(a[i+1]));
+      p.closePath();});
+    return p;});
+  htx.setTransform(1,0,0,1,0,0);htx.clearRect(0,0,W,H);
+  feats.forEach(function(f,i){
+    htx.fillStyle='rgb('+((i+1)&255)+','+((i+1)>>8)+',0)';
+    htx.fill(paths[i],'evenodd');});
+}
+var METRIKKER=[
+ {navn:'Største parti',parti:true},
+ {navn:'Medianinntekt 17+ (1000 kr)',hent:function(k){return k.inntekt;}},
+ {navn:'Valgdeltakelse 18+ (%)',hent:function(k){return k.deltakelse;}},
+ {navn:'Trygghet (snitt 0–100)',hent:function(k){return k.trygghet;}},
+ {navn:'Tillit (snitt 0–100)',hent:function(k){return k.tillit;}},
+ {navn:'Medlem Dnk (%)',hent:function(k){return k.dnk;}},
+ {navn:'Forventet levealder (år)',hent:function(k){return k.levealder;}},
+ {navn:'Psykisk helsekontakt (%/år)',hent:function(k){return k.psykisk;}},
+ {navn:'God egenvurdert helse (%)',hent:function(k){return k.helse_god;}},
+ {navn:'Stemmetilbøyelighet (0–100)',hent:function(k){return k.tilb_stemme;}},
+ {navn:'Protesttilbøyelighet (0–100)',hent:function(k){return k.tilb_protest;}},
+ {navn:'Øko: omfordeling→marked (0–100)',hent:function(k){return k.akser?k.akser[0]:null;}},
+ {navn:'Innvandring: restriktiv→liberal (0–100)',hent:function(k){return k.akser?k.akser[1]:null;}},
+ {navn:'Klima: vekst→vern (0–100)',hent:function(k){return k.akser?k.akser[2]:null;}},
+ {navn:'Sentrum–distrikt (0–100)',hent:function(k){return k.akser?k.akser[3]:null;}}];
+var metrikk=METRIKKER[0],lo=0,hi=1,storst={};
+var STOPP=[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]];
+function ramp(t){t=Math.max(0,Math.min(1,t));
+  var s=t*(STOPP.length-1),i=Math.min(STOPP.length-2,Math.floor(s)),f=s-i,
+      a=STOPP[i],b=STOPP[i+1];
+  return 'rgb('+Math.round(a[0]+(b[0]-a[0])*f)+','+Math.round(a[1]+(b[1]-a[1])*f)
+    +','+Math.round(a[2]+(b[2]-a[2])*f)+')';}
+var leg=document.getElementById('kartlegend');
+function beregn(){
+  if(metrikk.parti){
+    storst={};
+    D.kommuner.forEach(function(k){var best='Andre',bv=-1;
+      Object.keys(k.parti).forEach(function(p){if(k.parti[p]>bv){bv=k.parti[p];best=p;}});
+      storst[k.kode]=best;});
+    var brukt={};Object.keys(storst).forEach(function(k){
+      brukt[storst[k]]=(brukt[storst[k]]||0)+1;});
+    var h='';
+    Object.keys(brukt).sort(function(a,b){return brukt[b]-brukt[a];})
+      .forEach(function(p){h+='<span><span class="dot" style="background:'
+        +(PFARGE[p]||'#8a8f98')+'"></span>'+p+' — '+brukt[p]+' kommuner</span>';});
+    leg.innerHTML='<div class="chips">'+h+'</div>';
+  }else{
+    var vs=D.kommuner.map(metrikk.hent).filter(function(v){return v!=null;})
+      .sort(function(a,b){return a-b;});
+    lo=vs[Math.floor(vs.length*0.02)];
+    hi=vs[Math.min(vs.length-1,Math.ceil(vs.length*0.98))];
+    if(hi<=lo){lo=vs[0];hi=vs[vs.length-1];if(hi<=lo)hi=lo+1;}
+    var g='linear-gradient(90deg';
+    for(var i=0;i<=10;i++)g+=','+ramp(i/10);
+    leg.innerHTML='<div class="grad" style="background:'+g+')"></div>'
+      +'<div class="ender"><span>'+fmt(lo)+'</span><span>'+fmt(hi)+'</span></div>';
+  }
+}
+function fargeFor(k){
+  if(!k)return '#33363f';
+  if(metrikk.parti)return PFARGE[storst[k.kode]]||'#8a8f98';
+  var v=metrikk.hent(k);
+  if(v==null)return '#33363f';
+  return ramp((v-lo)/(hi-lo));
+}
+var hoverI=-1;
+function tegnKart(){
+  if(!paths.length)return;
+  ktx.clearRect(0,0,W,H);
+  feats.forEach(function(f,i){
+    ktx.fillStyle=fargeFor(KODE[f.kode]);
+    ktx.fill(paths[i],'evenodd');});
+  ktx.strokeStyle='rgba(21,22,26,0.85)';ktx.lineWidth=0.5;
+  paths.forEach(function(p){ktx.stroke(p);});
+  if(hoverI>=0){ktx.strokeStyle='#c9cdd6';ktx.lineWidth=1.1;ktx.stroke(paths[hoverI]);}
+  if(valgtKode&&idx[valgtKode]!=null){
+    ktx.strokeStyle='#ffffff';ktx.lineWidth=1.7;ktx.stroke(paths[idx[valgtKode]]);}
+}
+tegnKartHook=tegnKart;
+function finnI(e){
+  var r=kart.getBoundingClientRect(),
+      x=e.clientX-r.left,y=e.clientY-r.top;
+  if(x<0||y<0||x>=W||y>=H)return -1;
+  var d=htx.getImageData(Math.round(x),Math.round(y),1,1).data,
+      i=d[0]+d[1]*256-1;
+  // Kantpiksler antialiases i hit-lerretet og kan dekode til feil indeks —
+  // verifiser geometrisk, og fall tilbake til fullt søk langs grensene.
+  if(i>=0&&i<feats.length&&htx.isPointInPath(paths[i],x,y,'evenodd'))return i;
+  for(var j=0;j<paths.length;j++)
+    if(htx.isPointInPath(paths[j],x,y,'evenodd'))return j;
+  return -1;
+}
+kart.addEventListener('pointermove',function(e){
+  var i=finnI(e);
+  if(i!==hoverI){hoverI=i;tegnKart();}
+  if(i>=0){
+    var k=KODE[feats[i].kode],r=kart.getBoundingClientRect();
+    var v;
+    if(!k){v='(mangler data)';}
+    else if(metrikk.parti){v=storst[k.kode]+' '+fmt(k.parti[storst[k.kode]])+' %';}
+    else{v=fmt(metrikk.hent(k));}
+    tip.innerHTML='<b>'+(k?k.navn:feats[i].kode)+'</b><br>'+metrikk.navn+': '+v;
+    tip.style.display='block';
+    tip.style.left=Math.max(2,Math.min(e.clientX-r.left+14,W-190))+'px';
+    tip.style.top=Math.min(e.clientY-r.top+12,H-50)+'px';
+  }else tip.style.display='none';});
+kart.addEventListener('pointerleave',function(){
+  hoverI=-1;tip.style.display='none';tegnKart();});
+kart.addEventListener('click',function(e){
+  var i=finnI(e);
+  if(i>=0&&KODE[feats[i].kode]){
+    var k=KODE[feats[i].kode];sok.value=k.navn;vis(k.navn);}});
+var sel=document.getElementById('kartmetrikk');
+METRIKKER.forEach(function(m,i){var o=document.createElement('option');
+  o.value=i;o.textContent=m.navn;sel.appendChild(o);});
+sel.onchange=function(){metrikk=METRIKKER[sel.value];beregn();tegnKart();};
+if(window.ResizeObserver)
+  new ResizeObserver(function(){bygg();tegnKart();}).observe(boks);
+bygg();beregn();tegnKart();
+})();}else{document.getElementById('kartkol').style.display='none';}
+
 vis('Oslo - Oslove');sok.value='Oslo - Oslove';
 })();
 
 (function(){
-var h=D.nasjonal.helse, hk=document.getElementById('helsekort');
-[[h.psykisk+' %','psykisk helsekontakt siste år'],
- [h.muskel+' %','muskel/skjelett-kontakt siste år'],
- [h.helse_god+' %','god egenvurdert helse (16+)'],
- [h.levealder_menn+' år','forventet levealder menn'],
- [h.levealder_kvinner+' år','forventet levealder kvinner']]
-.forEach(function(p){var d=document.createElement('div');
-  d.innerHTML='<b>'+p[0]+'</b><span>'+p[1]+'</span>';hk.appendChild(d);});
-
 function fyllTabell(id, hodenavn, rader){
   var thead=document.querySelector('#'+id+' thead');
   var tbody=document.querySelector('#'+id+' tbody');
@@ -421,18 +615,11 @@ function fyllTabell(id, hodenavn, rader){
   thead.appendChild(tr);
   rader.forEach(function(r){
     var tr=document.createElement('tr');
-    r.forEach(function(c,i){var td=document.createElement('td');
+    r.forEach(function(c){var td=document.createElement('td');
       if(typeof c==='object'){td.innerHTML=c.html;}else{td.textContent=c;}
       tr.appendChild(td);});
     tbody.appendChild(tr);});
 }
-var TN=['tilb_stemme','tilb_flytte','tilb_frivillig','tilb_protest','tilb_risiko'];
-fyllTabell('tilbtab', ['Hovedgruppe','Stemme','Flytte','Frivillig','Protest','Risiko'],
-  D.hovedliste.map(function(hg){
-    var t=D.nasjonal.tilb_hoved[hg]||{};
-    return [{html:'<span class="dot" style="background:'+FARGE[hg]+'"></span>'+hg}]
-      .concat(TN.map(function(k){return t[k];}));}));
-
 var KV=['laveste','2.','3.','4.','høyeste'];
 fyllTabell('bokstavinntekt', ['Kvintil','E %','N %','F %','P %'],
   D.nasjonal.bokstaver.kvintil.map(function(r,i){
