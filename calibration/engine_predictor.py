@@ -142,9 +142,10 @@ class EnginePredictor:
                  cache_dir: str | Path = ".cache/engine_party", max_workers: int = 8,
                  turnout_weighting: bool = False):
         # turnout_weighting=False som standard: MÅLT (2021→2025, 8 kommuner) at
-        # eksplisitt 13360-vekting gjør motoren marginalt svakere (3.71→3.80 pp
-        # MAE geo_no_name) — LLM-ens celleanslag er allerede implisitt
-        # deltakelsesvektet, så vekting dobbelteller utdanningsgradienten.
+        # eksplisitt vekting gjør motoren marginalt svakere — også med full
+        # kjønn×alder×utdanning-LUT (3.71→3.81 pp MAE geo_no_name; etter affin
+        # korreksjon eksakt likt, 2.01). LLM-ens celleanslag er allerede
+        # implisitt deltakelsesvektet; vekting dobbelteller gradientene.
         self.ssb, self.klass, self.items = ssb, klass, items
         self.variant = VARIANTS[variant]
         self.pop_year, self.granularity = pop_year, granularity
@@ -263,7 +264,8 @@ class EnginePredictor:
                         continue
                     demo = persona.demographics
                     w = (persona.weight * share
-                         * turnout_weight(tlut, demo["kjonn"], demo["utdanning"]))
+                         * turnout_weight(tlut, demo["kjonn"], demo["aldersgruppe"],
+                                          demo["utdanning"]))
                     for party in ENGINE_PARTIES:
                         agg[party] += w * d[party] / 100.0
                     W += w

@@ -165,7 +165,9 @@ function render(d) {
     d.aerlighet.prior_akse;
   $('dekning').textContent =
     `Dekning: ${d.dekning.unike_prompter} prompter, ${d.dekning.nye_kall} nye LLM-kall, ` +
-    `${d.dekning.feilede} feilede.`;
+    `${d.dekning.feilede} feilede. LLM-sikkerhet (selvrapportert, vektes ikke inn): ` +
+    `snitt ${d.llm_sikkerhet.snitt.toFixed(2)}, ` +
+    `${Math.round(d.llm_sikkerhet.andel_lav * 100)} % av vekten under 0.5.`;
 }
 
 $('ask').onclick = async () => {

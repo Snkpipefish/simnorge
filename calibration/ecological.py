@@ -63,10 +63,11 @@ def cell_weights(ssb: SSBClient, kommune: str, *, year: str,
     Fraksjonell (ingen integerisering/personekspansjon) — vi trenger andeler,
     ikke individer. None hvis kommunen mangler kritiske marginer (logget der).
 
-    ``turnout``: valgfri (kjønn, utdanning) -> P(stemmer) fra 13360 (byggeåret —
-    lekkasjedisiplin håndheves av kallende kode). Valgresultatet er en
-    deltakelsesvektet sum av cellene, så vektene bør være det også: uten dette
-    må δ-stereotypene selv absorbere at lavt utdannede møter sjeldnere opp.
+    ``turnout``: valgfri (kjønn, aldersbånd, utdanning) -> P(stemmer) fra
+    13360+13085 (byggeåret — lekkasjedisiplin håndheves av kallende kode).
+    Valgresultatet er en deltakelsesvektet sum av cellene, så vektene bør være
+    det også: uten dette må δ-stereotypene selv absorbere at unge og lavt
+    utdannede møter sjeldnere opp.
     """
     km = build_marginals(ssb, kommune, year=year)
     if km.skipped or km.n_total <= 0:
@@ -85,7 +86,7 @@ def cell_weights(ssb: SSBClient, kommune: str, *, year: str,
         for ai, a in enumerate(AGE_LABELS):
             for ei, e in enumerate(EDU_LABELS):
                 for ci, c in enumerate(econ_labels):
-                    t = turnout.get((s, e), 1.0) if turnout is not None else 1.0
+                    t = turnout.get((s, a, e), 1.0) if turnout is not None else 1.0
                     w[CELL_INDEX[(s, a, e, c)]] = table[si, ai, ei, ci] * t
     return w / w.sum()
 

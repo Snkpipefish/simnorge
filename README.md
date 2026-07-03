@@ -77,12 +77,17 @@ Første LLM-kjøring for en ny (spørsmål × geografi) tar ~1 min; deretter cac
   variasjon mot midten (b > 1 for de fleste partier).
 - **Korreksjonen gjelder KUN valg.** Den er lært på valgfasit og skal aldri
   brukes som skjult presisjon på frie spørsmål i spørretaben.
-- **Deltakelsesvekting (13360)** er implementert, men målingen viste at den
-  gjør motoren marginalt svakere (LLM-svarene er allerede implisitt
-  deltakelsesvektede — eksplisitt vekting dobbelteller utdanningsgradienten).
-  Den er derfor av som standard i motoren (`turnout_weighting=False` gir
-  identisk oppførsel som før; flagget finnes for eksperimenter). I den
-  økologiske modellen er den eksakt MAE-nøytral (fitten absorberer den), men
-  brukes fordi stereotypene da beskriver velgere, ikke bosatte.
+- **Deltakelsesvekting (13360 + 13085)** dekker både utdannings- og alders-
+  gradienten (kjønn × aldersbånd × utdanning, multiplikativt kombinert —
+  dokumentert uavhengighetsantakelse; 16–17-åringer teller med deltakelse 0).
+  Målingen viste likevel at den gjør LLM-motoren marginalt svakere
+  (3,71 → 3,81 pp; LLM-svarene er allerede implisitt deltakelsesvektede, så
+  eksplisitt vekting dobbelteller). Av som standard i motoren
+  (`turnout_weighting=False`); i den økologiske modellen brukes den fordi
+  stereotypene da beskriver velgere, ikke bosatte.
+- **LLM-ens selvrapporterte `sikkerhet` rapporteres, men vektes aldri inn**:
+  selvrapportert sikkerhet er ukalibrert, og nedvekting av usikre celler ville
+  stille skjevfordele representativiteten. Spørretaben viser vektet snitt og
+  andel lav-sikkerhet i dekningslinjen.
 - **Små kommuner** gir < 24 demografiske celler → bredere usikkerhet i
   spørretaben.

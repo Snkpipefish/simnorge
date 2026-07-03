@@ -66,6 +66,8 @@ class AskResult:
     n_prompts: int
     n_calls: int
     n_failed: int
+    certainty_mean: float = float("nan")   # LLM-ens selvrapporterte sikkerhet (vektet)
+    low_certainty_share: float = 0.0       # andel av vekten med sikkerhet < 0.5
     honesty: dict = field(default_factory=dict)
 
     def as_dict(self) -> dict:
@@ -85,6 +87,8 @@ class AskResult:
                          "per_kjonn": {k: round(v, 2) for k, v in self.by_sex.items()}},
             "dekning": {"unike_prompter": self.n_prompts, "nye_kall": self.n_calls,
                         "feilede": self.n_failed},
+            "llm_sikkerhet": {"snitt": round(self.certainty_mean, 2),
+                              "andel_lav": round(self.low_certainty_share, 2)},
             "aerlighet": self.honesty,
         }
 
@@ -154,6 +158,14 @@ class SimNorgeService:
         mean = float(np.average(x, weights=w))
         std = float(np.sqrt(np.average((x - mean) ** 2, weights=w)))
 
+        # LLM-ens selvrapporterte sikkerhet RAPPORTERES men vektes aldri inn:
+        # selvrapportert sikkerhet er ukalibrert, og å nedvekte lav-sikkerhet-
+        # celler ville stille skjevfordele representativiteten (cellene med
+        # usikker LLM er fortsatt like mange virkelige mennesker).
+        cert = res["sikkerhet"].to_numpy()
+        certainty_mean = float(np.average(cert, weights=w))
+        low_certainty_share = float(w[cert < 0.5].sum() / w.sum())
+
         # Fordeling over skalabins med bootstrap-bånd (instans = enhet).
         cats = [f"{lo}-{hi}" for lo, hi in POSITION_BINS]
         onehot = np.zeros((len(res), len(POSITION_BINS)))
@@ -187,5 +199,7 @@ class SimNorgeService:
             by_level=group_means("level"), by_age=group_means("aldersgruppe"),
             by_sex=group_means("kjonn"),
             n_prompts=len(inst),
-            n_calls=out.n_calls, n_failed=out.n_failed, honesty=honesty,
+            n_calls=out.n_calls, n_failed=out.n_failed,
+            certainty_mean=certainty_mean, low_certainty_share=low_certainty_share,
+            honesty=honesty,
         )
