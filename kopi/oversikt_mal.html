@@ -84,9 +84,12 @@ Kommuneresultatene ved stortingsvalget 2025 reproduseres eksakt.</p>
 </div>
 
 <h2>Kommunevelger</h2>
-<div style="margin:10px 0;">
-<input id="ksok" list="kliste" placeholder="Skriv kommunenavn…" style="width:280px;">
-<datalist id="kliste"></datalist>
+<div style="margin:10px 0; position:relative; max-width:320px;">
+<input id="ksok" placeholder="Skriv kommunenavn…" autocomplete="off"
+  style="width:100%;">
+<div id="kforslag" style="display:none; position:absolute; top:100%; left:0;
+  right:0; z-index:10; background:var(--flate2); border:1px solid var(--kant);
+  border-radius:8px; max-height:280px; overflow-y:auto; margin-top:4px;"></div>
 </div>
 <div class="kort" id="knokkel"></div>
 <div class="to">
@@ -311,9 +314,7 @@ sorter('n');retning=-1;
 })();
 
 (function(){
-var sok=document.getElementById('ksok'),liste=document.getElementById('kliste');
-D.kommuner.forEach(function(k){var o=document.createElement('option');
-  o.value=k.navn;liste.appendChild(o);});
+var sok=document.getElementById('ksok'),forslag=document.getElementById('kforslag');
 function bar(el,navn,verdi,maks,farge){
   var r=document.createElement('div');r.className='barrad';
   r.innerHTML='<span>'+navn+'</span><div><div class="bar" style="width:'
@@ -354,7 +355,38 @@ function vis(navn){
       +'<span class="verdi">'+fmt(n)+'</span>';
     ka.appendChild(r);});
 }
-sok.addEventListener('change',function(){vis(sok.value);});
+function visForslag(){
+  var q=sok.value.trim().toLowerCase();
+  if(!q){forslag.style.display='none';return;}
+  var starter=[],inneholder=[];
+  D.kommuner.forEach(function(k){
+    var n=k.navn.toLowerCase();
+    if(n.indexOf(q)===0)starter.push(k.navn);
+    else if(n.indexOf(q)>0)inneholder.push(k.navn);});
+  var treff=starter.concat(inneholder).slice(0,8);
+  if(!treff.length){forslag.style.display='none';return;}
+  forslag.innerHTML='';
+  treff.forEach(function(navn){
+    var el=document.createElement('div');
+    el.textContent=navn;
+    el.style.cssText='padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--kant);';
+    el.addEventListener('pointerdown',function(e){
+      e.preventDefault();
+      sok.value=navn;forslag.style.display='none';vis(navn);});
+    el.addEventListener('mouseenter',function(){el.style.background='var(--flate)';});
+    el.addEventListener('mouseleave',function(){el.style.background='';});
+    forslag.appendChild(el);});
+  forslag.lastChild.style.borderBottom='none';
+  forslag.style.display='block';
+}
+sok.addEventListener('input',visForslag);
+sok.addEventListener('focus',visForslag);
+sok.addEventListener('blur',function(){
+  setTimeout(function(){forslag.style.display='none';},200);});
+sok.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&forslag.style.display==='block'&&forslag.firstChild){
+    var navn=forslag.firstChild.textContent;
+    sok.value=navn;forslag.style.display='none';vis(navn);}});
 vis('Oslo - Oslove');sok.value='Oslo - Oslove';
 })();
 
