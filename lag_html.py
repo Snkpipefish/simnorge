@@ -67,13 +67,6 @@ def main() -> None:
     v = df[df["alder"] >= 16]
     velgere = v[~v["parti"].isin(["stemte ikke", "ikke stemmerett"])]
 
-    try:
-        from kopi.eu1994 import hent_eu1994
-        eu1994 = hent_eu1994()
-    except Exception as e:                     # siden skal kunne bygges offline
-        print(f"EU-1994 utilgjengelig ({e}) — kommunekort uten nei-andel.")
-        eu1994 = None
-
     nasjonal = {
         "total": int(len(df)),
         "voksne": int(len(v)),
@@ -114,8 +107,6 @@ def main() -> None:
             "kode": str(kode),
             "navn": str(g["kommune_navn"].iloc[0]),
             "akser": rad_akser,
-            **({"eu1994": round(eu1994[str(kode)] * 100, 1)}
-               if eu1994 and str(kode) in eu1994 else {}),
             "n": int(len(g)),
             "inntekt": int(g["brutto_inntekt"].median() // 1000),
             "parti": {p: round(float((vel["parti"] == p).mean() * 100), 1)

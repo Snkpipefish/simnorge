@@ -340,8 +340,6 @@ function vis(navn){
    [k.akser[1],'innvandring: restriktiv→liberal'],
    [k.akser[2],'klima: vekst→vern'],
    [k.akser[3],'sentrum–distrikt (snitt)']);
-  if(k.eu1994!==undefined)kort.push(
-   [k.eu1994.toLocaleString('nb-NO')+' %','nei ved EU-avstemningen 1994']);
   kort.forEach(function(p){var d=document.createElement('div');
     d.innerHTML='<b>'+p[0]+'</b><span>'+p[1]+'</span>';nk.appendChild(d);});
   var kp=document.getElementById('kparti');kp.innerHTML='';
