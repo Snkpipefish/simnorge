@@ -22,7 +22,7 @@ h2 { font-size:19px; font-weight:600; margin:36px 0 12px; }
 .kort span { color:var(--tekst2); font-size:12.5px; }
 #graf { position:relative; height:620px; background:var(--flate);
   border:1px solid var(--kant); border-radius:12px; overflow:hidden; }
-#graf canvas { display:block; cursor:grab; }
+#graf canvas { display:block; cursor:grab; touch-action:pan-y; }
 #tip { position:absolute; display:none; pointer-events:none;
   background:var(--flate2); border:1px solid var(--kant); border-radius:8px;
   padding:10px 12px; font-size:12.5px; line-height:1.55; max-width:240px; }
@@ -49,6 +49,19 @@ select, input { background:var(--flate2); color:var(--tekst);
 @media (max-width:800px){ .to { grid-template-columns:1fr; } }
 .fotnote { color:var(--tekst2); font-size:12.5px; margin:40px 0 10px;
   border-top:1px solid var(--kant); padding-top:16px; }
+.detalj td { background:var(--flate); font-size:12.5px; white-space:normal; }
+.detalj dl { display:grid; grid-template-columns:auto 1fr; gap:2px 14px;
+  margin:4px 0; text-align:left; }
+.detalj dt { color:var(--tekst2); }
+.detalj dd { margin:0; }
+@media (max-width:700px) {
+  body { padding:12px; }
+  #graf { height:460px; }
+  .m-skjul { display:none; }
+  tbody tr { cursor:pointer; }
+  th, td { white-space:normal; }
+  td:first-child { min-width:110px; }
+}
 </style>
 </head>
 <body>
@@ -180,26 +193,42 @@ function finn(x,y){var best=null,bd=1e9;
   noder.forEach(function(n){var d=Math.hypot(n.x-x,n.y-y);
     if(d<n.r+6&&d<bd){best=n;bd=d;}});return best;}
 function pos(e){var r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top];}
+function visTip(g,x,y){
+  var h;
+  if(g.hub){h='<b>'+g.id+'</b><br>'+fmt(g.n)+' personer ('+Math.round(g.n/TOT*100)+' % av 16+)';}
+  else{h='<b>'+g.id+'</b><br><span style="color:#a5a8b3">'+g.hoved+'</span><br>'
+    +fmt(g.n)+' personer ('+(g.n/TOT*100).toFixed(1)+' %)<br>'
+    +'Største parti: '+g.parti+'<br>Medianinntekt: '+g.inntekt+' 000 kr<br>'
+    +'Medianalder: '+g.alder+' år<br>Trygghet '+g.trygghet+' · tillit '+g.tillit
+    +' · verdi '+g.verdi+'<br>Medlem Dnk: '+g.dnk+' %<br>'
+    +'Stemme '+Math.round(g.tilb_stemme)+' · protest '+Math.round(g.tilb_protest)
+    +' · frivillig '+Math.round(g.tilb_frivillig);}
+  tip.innerHTML=h;tip.style.display='block';
+  tip.style.left=Math.max(4,Math.min(x+16,W-250))+'px';
+  tip.style.top=Math.max(4,Math.min(y+12,H-190))+'px';
+}
+var kandidat=null,startx=0,starty=0,dratt=false;
 cv.addEventListener('pointerdown',function(e){var p=pos(e);mx=p[0];my=p[1];
-  drag=finn(mx,my);if(drag){cv.setPointerCapture(e.pointerId);
-  cv.style.cursor='grabbing';varme=Math.max(varme,0.4);}});
+  startx=mx;starty=my;dratt=false;
+  kandidat=finn(mx,my);
+  if(kandidat){cv.setPointerCapture(e.pointerId);varme=Math.max(varme,0.3);}});
 cv.addEventListener('pointermove',function(e){var p=pos(e);mx=p[0];my=p[1];
-  if(drag)return;hover=finn(mx,my);
-  if(hover){var g=hover,h;
-    if(g.hub){h='<b>'+g.id+'</b><br>'+fmt(g.n)+' personer ('+Math.round(g.n/TOT*100)+' % av 16+)';}
-    else{h='<b>'+g.id+'</b><br><span style="color:#a5a8b3">'+g.hoved+'</span><br>'
-      +fmt(g.n)+' personer ('+(g.n/TOT*100).toFixed(1)+' %)<br>'
-      +'Største parti: '+g.parti+'<br>Medianinntekt: '+g.inntekt+' 000 kr<br>'
-      +'Medianalder: '+g.alder+' år<br>Trygghet '+g.trygghet+' · tillit '+g.tillit
-      +' · verdi '+g.verdi+'<br>Medlem Dnk: '+g.dnk+' %<br>'
-      +'Stemme '+Math.round(g.tilb_stemme)+' · protest '+Math.round(g.tilb_protest)
-      +' · frivillig '+Math.round(g.tilb_frivillig);}
-    tip.innerHTML=h;tip.style.display='block';
-    tip.style.left=Math.min(mx+16,W-250)+'px';
-    tip.style.top=Math.min(my+12,H-180)+'px';cv.style.cursor='pointer';
-  } else {tip.style.display='none';cv.style.cursor='grab';}});
-cv.addEventListener('pointerup',function(){drag=null;cv.style.cursor='grab';});
-cv.addEventListener('pointerleave',function(){hover=null;drag=null;tip.style.display='none';});
+  if(kandidat&&!drag&&Math.hypot(mx-startx,my-starty)>8){
+    drag=kandidat;cv.style.cursor='grabbing';tip.style.display='none';dratt=true;}
+  if(drag)return;
+  if(e.pointerType==='mouse'){
+    hover=finn(mx,my);
+    if(hover){visTip(hover,mx,my);cv.style.cursor='pointer';}
+    else{tip.style.display='none';cv.style.cursor='grab';}
+  }});
+cv.addEventListener('pointerup',function(e){
+  if(kandidat&&!dratt){                      // tap/klikk: vis eller skjul
+    hover=kandidat;var p=pos(e);visTip(kandidat,p[0],p[1]);
+  } else if(!kandidat){hover=null;tip.style.display='none';}
+  drag=null;kandidat=null;cv.style.cursor='grab';});
+cv.addEventListener('pointercancel',function(){drag=null;kandidat=null;});
+cv.addEventListener('pointerleave',function(e){
+  if(e.pointerType==='mouse'){hover=null;drag=null;kandidat=null;tip.style.display='none';}});
 if(window.ResizeObserver) new ResizeObserver(function(){mal();varme=Math.max(varme,0.5);}).observe(wrap);
 var leg=document.getElementById('legend');
 D.hovedliste.forEach(function(h){
@@ -210,13 +239,16 @@ D.hovedliste.forEach(function(h){
 })();
 
 (function(){
-var kol=[["id","Gruppe"],["hoved","Hovedgruppe"],["n","Antall"],["parti","Største parti"],
-  ["inntekt","Inntekt (1000)"],["alder","Alder"],["trygghet","Trygghet"],["tillit","Tillit"],
-  ["verdi","Verdi"],["dnk","Dnk %"],["tilb_stemme","Stemme"],["tilb_flytte","Flytte"],
-  ["tilb_frivillig","Frivillig"],["tilb_protest","Protest"],["tilb_risiko","Risiko"]];
+var kol=[["id","Gruppe",1],["hoved","Hovedgruppe",0],["n","Antall",1],
+  ["parti","Største parti",1],["inntekt","Inntekt (1000)",0],["alder","Alder",0],
+  ["trygghet","Trygghet",0],["tillit","Tillit",0],["verdi","Verdi",0],
+  ["dnk","Dnk %",0],["tilb_stemme","Stemme",0],["tilb_flytte","Flytte",0],
+  ["tilb_frivillig","Frivillig",0],["tilb_protest","Protest",0],
+  ["tilb_risiko","Risiko",0]];
 var thead=document.querySelector('#gtab thead'),tbody=document.querySelector('#gtab tbody');
 var tr=document.createElement('tr');
-kol.forEach(function(k,i){var th=document.createElement('th');th.textContent=k[1];
+kol.forEach(function(k){var th=document.createElement('th');th.textContent=k[1];
+  if(!k[2])th.className='m-skjul';
   th.onclick=function(){sorter(k[0]);};tr.appendChild(th);});
 thead.appendChild(tr);
 var retning=-1,sist='';
@@ -235,7 +267,19 @@ function sorter(felt){
       if(k[0]==='id'){td.innerHTML='<span class="dot" style="background:'+FARGE[g.hoved]+'"></span>'+v;}
       else if(k[0]==='n'){td.textContent=fmt(v);}
       else{td.textContent=v;}
+      if(!k[2])td.className='m-skjul';
       tr.appendChild(td);});
+    tr.onclick=function(){
+      var neste=tr.nextElementSibling;
+      if(neste&&neste.classList.contains('detalj')){neste.remove();return;}
+      document.querySelectorAll('.detalj').forEach(function(x){x.remove();});
+      var dr=document.createElement('tr');dr.className='detalj';
+      var td=document.createElement('td');td.colSpan=kol.length;
+      var h='<dl>';
+      kol.slice(1).forEach(function(k){
+        var v=g[k[0]];h+='<dt>'+k[1]+'</dt><dd>'+(k[0]==='n'?fmt(v):v)+'</dd>';});
+      td.innerHTML=h+'</dl>';dr.appendChild(td);
+      tr.after(dr);};
     tbody.appendChild(tr);});
 }
 sorter('n');retning=-1;
